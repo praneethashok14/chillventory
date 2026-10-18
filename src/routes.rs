@@ -56,6 +56,29 @@ impl AppState {
             .or_insert_with(|| store)
             .clone())
     }
+
+    /// Resolve the photo file path for an item inside an account. Also
+    /// guards against path traversal: `item_id` must look like a UUID so we
+    /// never let a request escape the per-account photos directory.
+    pub fn photo_path(&self, account_id: &str, item_id: &str) -> Option<PathBuf> {
+        if !is_safe_id(item_id) || !is_safe_id(account_id) {
+            return None;
+        }
+        Some(
+            self.data_dir
+                .join("accounts")
+                .join(account_id)
+                .join("photos")
+                .join(format!("{item_id}.jpg")),
+        )
+    }
+}
+
+fn is_safe_id(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 64
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
 #[derive(Debug)]
@@ -175,6 +198,10 @@ pub fn router(state: AppState) -> Router {
         .route(
             "/api/appliances/:id/items/:item_id/open-all",
             post(mark_all_open),
+        )
+        .route(
+            "/api/appliances/:id/items/:item_id/photo",
+            get(get_photo).post(upload_photo).delete(delete_photo),
         )
         .route("/api/groups", get(list_groups).post(create_group))
         .route("/api/groups/:id", patch(update_group).delete(delete_group))
@@ -644,6 +671,7 @@ async fn create_item(
         tracking,
         expiration_date: body.expiration_date.and_then(blank_to_none),
         notes: body.notes.and_then(blank_to_none),
+        has_photo: false,
         created_at: now(),
         updated_at: now(),
     };
@@ -785,6 +813,11 @@ async fn delete_item(
         Ok(())
     })
     .map_err(storage_err_to_api)?;
+    // Best-effort photo cleanup. Not a hard error if the file is missing or
+    // can't be removed — the item is already gone from the inventory record.
+    if let Some(path) = state.photo_path(&session.account_id, &item_id) {
+        let _ = std::fs::remove_file(path);
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -963,6 +996,7 @@ fn perform_transfer(
                 },
                 expiration_date: source_snapshot.expiration_date.clone(),
                 notes: source_snapshot.notes.clone(),
+                has_photo: false,
                 created_at: now(),
                 updated_at: now(),
             };
@@ -1181,6 +1215,156 @@ async fn list_items(
         "groups": groups,
         "appliances": appliances,
     })))
+}
+
+// ---------- photos ----------
+
+/// Max accepted base64 payload — ~1.5 MB of binary. Clients should resize
+/// to well under this before uploading.
+const MAX_PHOTO_BYTES_B64: usize = 2 * 1024 * 1024;
+
+#[derive(Deserialize)]
+struct PhotoUploadBody {
+    /// Base64-encoded JPEG. Must decode to valid JPEG bytes.
+    image_base64: String,
+}
+
+async fn upload_photo(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((appliance_id, item_id)): Path<(String, String)>,
+    Json(body): Json<PhotoUploadBody>,
+) -> ApiResult<Json<InventoryItem>> {
+    use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
+
+    let session = require_auth(&state.accounts, &headers)?;
+    require_csrf(&session, &headers)?;
+
+    if body.image_base64.len() > MAX_PHOTO_BYTES_B64 {
+        return Err(ApiError::BadRequest(
+            "photo too large (resize to under ~1.5 MB)".to_string(),
+        ));
+    }
+    let bytes = STANDARD
+        .decode(body.image_base64.as_bytes())
+        .map_err(|_| ApiError::BadRequest("image_base64 is not valid base64".to_string()))?;
+    if !looks_like_jpeg(&bytes) {
+        return Err(ApiError::BadRequest(
+            "only JPEG uploads are accepted (resize client-side to JPEG)".to_string(),
+        ));
+    }
+
+    let path = state
+        .photo_path(&session.account_id, &item_id)
+        .ok_or_else(|| ApiError::BadRequest("invalid item id".to_string()))?;
+
+    // Confirm the item exists before we write a file.
+    let inv = state.inventory(&session.account_id)?;
+    inv.with_read(|i| {
+        if !i
+            .items
+            .iter()
+            .any(|x| x.id == item_id && x.appliance_id == appliance_id)
+        {
+            return Err(ApiError::NotFound(format!("item {item_id} not found")));
+        }
+        Ok(())
+    })?;
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| ApiError::Internal(format!("photo dir create: {e}")))?;
+    }
+    // Atomic write: temp file + rename.
+    let file_name = path
+        .file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "photo.jpg".to_string());
+    let tmp = path
+        .parent()
+        .map(|p| p.join(format!(".{file_name}.tmp")))
+        .ok_or_else(|| ApiError::Internal("photo path has no parent".to_string()))?;
+    std::fs::write(&tmp, &bytes).map_err(|e| ApiError::Internal(format!("photo write: {e}")))?;
+    std::fs::rename(&tmp, &path).map_err(|e| ApiError::Internal(format!("photo rename: {e}")))?;
+
+    // Flip has_photo = true on the item.
+    let updated = inv
+        .mutate(|i| {
+            let item = i
+                .items
+                .iter_mut()
+                .find(|x| x.id == item_id && x.appliance_id == appliance_id)
+                .ok_or_else(|| StorageError::Corrupt(format!("item {item_id} not found")))?;
+            item.has_photo = true;
+            item.updated_at = now();
+            Ok(item.clone())
+        })
+        .map_err(storage_err_to_api)?;
+    Ok(Json(updated))
+}
+
+async fn get_photo(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((appliance_id, item_id)): Path<(String, String)>,
+) -> ApiResult<Response> {
+    let session = require_auth(&state.accounts, &headers)?;
+    // Belt-and-braces: don't serve a photo for an item that isn't yours.
+    let inv = state.inventory(&session.account_id)?;
+    inv.with_read(|i| {
+        if !i
+            .items
+            .iter()
+            .any(|x| x.id == item_id && x.appliance_id == appliance_id)
+        {
+            return Err(ApiError::NotFound(format!("item {item_id} not found")));
+        }
+        Ok(())
+    })?;
+    let path = state
+        .photo_path(&session.account_id, &item_id)
+        .ok_or_else(|| ApiError::BadRequest("invalid item id".to_string()))?;
+    let bytes =
+        std::fs::read(&path).map_err(|_| ApiError::NotFound("photo not found".to_string()))?;
+    let mut resp = Response::new(axum::body::Body::from(bytes));
+    resp.headers_mut()
+        .insert(header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg"));
+    // Private per-account content: never cache in shared proxies or the SW.
+    resp.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, no-store"),
+    );
+    Ok(resp)
+}
+
+async fn delete_photo(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((appliance_id, item_id)): Path<(String, String)>,
+) -> ApiResult<StatusCode> {
+    let session = require_auth(&state.accounts, &headers)?;
+    require_csrf(&session, &headers)?;
+    let inv = state.inventory(&session.account_id)?;
+    inv.mutate(|i| {
+        let item = i
+            .items
+            .iter_mut()
+            .find(|x| x.id == item_id && x.appliance_id == appliance_id)
+            .ok_or_else(|| StorageError::Corrupt(format!("item {item_id} not found")))?;
+        item.has_photo = false;
+        item.updated_at = now();
+        Ok(())
+    })
+    .map_err(storage_err_to_api)?;
+    if let Some(path) = state.photo_path(&session.account_id, &item_id) {
+        let _ = std::fs::remove_file(path);
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+fn looks_like_jpeg(bytes: &[u8]) -> bool {
+    bytes.len() >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF
 }
 
 // ---------- utils ----------

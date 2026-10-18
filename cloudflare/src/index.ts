@@ -6,6 +6,7 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 export interface Env {
   DB: D1Database;
   SESSIONS: KVNamespace;
+  PHOTOS: R2Bucket;
   ASSETS: Fetcher;
   SESSION_TTL_SECONDS?: string;
   PBKDF2_ITERATIONS?: string;
@@ -47,6 +48,7 @@ interface InventoryItemBase {
   category?: string | null;
   expiration_date?: string | null;
   notes?: string | null;
+  has_photo?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -636,6 +638,7 @@ app.post("/api/appliances/:id/items", async (c) => {
         category: blankToNull(body.category),
         expiration_date: blankToNull(body.expiration_date),
         notes: blankToNull(body.notes),
+        has_photo: false,
         created_at: nowIso(),
         updated_at: nowIso(),
         ...trackingPart.ok,
@@ -721,6 +724,8 @@ app.delete("/api/appliances/:id/items/:item_id", async (c) => {
         throw new HttpErr(404, `item ${itemId} not found`);
       }
     });
+    // Best-effort R2 photo cleanup; absent object is not an error.
+    await c.env.PHOTOS.delete(photoKey(session.account_id, itemId));
     return c.body(null, 204);
   } catch (e) {
     return httpErrorResponse(c, e);
@@ -817,6 +822,7 @@ async function packOpen(c: any, mode: "one" | "all"): Promise<Response> {
           pack_status: "opened",
           expiration_date: source.expiration_date ?? null,
           notes: source.notes ?? null,
+          has_photo: false,
           created_at: nowIso(),
           updated_at: nowIso(),
         };
@@ -1034,6 +1040,110 @@ function httpErrorResponse(c: any, e: unknown): Response {
   console.error("unhandled route error", e);
   return jsonError(c, 500, "internal", "unexpected error");
 }
+
+// ---------- Photos ----------
+
+const MAX_PHOTO_BYTES_B64 = 2 * 1024 * 1024;
+
+function photoKey(accountId: string, itemId: string): string {
+  return `${accountId}/${itemId}.jpg`;
+}
+
+function looksLikeJpeg(bytes: Uint8Array): boolean {
+  return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+}
+
+app.post("/api/appliances/:id/items/:item_id/photo", async (c) => {
+  const err = await requireAuth(c);
+  if (err) return err;
+  const session = c.get("session")!;
+  const csrfErr = requireCsrf(c, session);
+  if (csrfErr) return csrfErr;
+  const applianceId = c.req.param("id");
+  const itemId = c.req.param("item_id");
+  const body = await c.req.json<{ image_base64?: string }>().catch(() => ({}));
+  if (typeof body.image_base64 !== "string") {
+    return jsonError(c, 400, "bad_request", "image_base64 is required");
+  }
+  if (body.image_base64.length > MAX_PHOTO_BYTES_B64) {
+    return jsonError(c, 400, "bad_request", "photo too large (resize to under ~1.5 MB)");
+  }
+  let bytes: Uint8Array;
+  try {
+    bytes = fromBase64(body.image_base64);
+  } catch {
+    return jsonError(c, 400, "bad_request", "image_base64 is not valid base64");
+  }
+  if (!looksLikeJpeg(bytes)) {
+    return jsonError(
+      c,
+      400,
+      "bad_request",
+      "only JPEG uploads are accepted (resize client-side to JPEG)",
+    );
+  }
+  try {
+    const updated = await mutateInventory(c.env, session.account_id, (inv) => {
+      const item = inv.items.find(
+        (x) => x.id === itemId && x.appliance_id === applianceId,
+      );
+      if (!item) throw new HttpErr(404, `item ${itemId} not found`);
+      item.has_photo = true;
+      item.updated_at = nowIso();
+      return item;
+    });
+    await c.env.PHOTOS.put(photoKey(session.account_id, itemId), bytes, {
+      httpMetadata: { contentType: "image/jpeg" },
+    });
+    return c.json(updated);
+  } catch (e) {
+    return httpErrorResponse(c, e);
+  }
+});
+
+app.get("/api/appliances/:id/items/:item_id/photo", async (c) => {
+  const err = await requireAuth(c);
+  if (err) return err;
+  const session = c.get("session")!;
+  const applianceId = c.req.param("id");
+  const itemId = c.req.param("item_id");
+  const inv = await getInventory(c.env, session.account_id);
+  if (!inv.items.some((x) => x.id === itemId && x.appliance_id === applianceId)) {
+    return jsonError(c, 404, "not_found", `item ${itemId} not found`);
+  }
+  const obj = await c.env.PHOTOS.get(photoKey(session.account_id, itemId));
+  if (!obj) return jsonError(c, 404, "not_found", "photo not found");
+  return new Response(obj.body, {
+    headers: {
+      "content-type": "image/jpeg",
+      "cache-control": "private, no-store",
+    },
+  });
+});
+
+app.delete("/api/appliances/:id/items/:item_id/photo", async (c) => {
+  const err = await requireAuth(c);
+  if (err) return err;
+  const session = c.get("session")!;
+  const csrfErr = requireCsrf(c, session);
+  if (csrfErr) return csrfErr;
+  const applianceId = c.req.param("id");
+  const itemId = c.req.param("item_id");
+  try {
+    await mutateInventory(c.env, session.account_id, (inv) => {
+      const item = inv.items.find(
+        (x) => x.id === itemId && x.appliance_id === applianceId,
+      );
+      if (!item) throw new HttpErr(404, `item ${itemId} not found`);
+      item.has_photo = false;
+      item.updated_at = nowIso();
+    });
+    await c.env.PHOTOS.delete(photoKey(session.account_id, itemId));
+    return c.body(null, 204);
+  } catch (e) {
+    return httpErrorResponse(c, e);
+  }
+});
 
 // ---------- Static asset fallback ----------
 // Hono routes handle everything under /api/*. For any other path we let the

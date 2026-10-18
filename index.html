@@ -1437,14 +1437,128 @@
         h("button", { class: "ghost danger", "aria-label": "Delete " + item.name, onClick: () => deleteItemFlow(item), text: "Delete" }),
       ]);
 
-      return h("div", { class: "inv-item" }, [
-        h("div", {}, [
+      const thumb = item.has_photo
+        ? h("button", {
+            class: "ghost",
+            style: "padding:0;border:1px solid var(--border);background:var(--surface-2);border-radius:8px;overflow:hidden;cursor:zoom-in",
+            "aria-label": "View photo of " + item.name,
+            onClick: () => openPhotoLightbox(item),
+          }, [
+            h("img", {
+              src: "/api/appliances/" + encodeURIComponent(item.appliance_id) +
+                   "/items/" + encodeURIComponent(item.id) + "/photo",
+              alt: item.name,
+              loading: "lazy",
+              decoding: "async",
+              width: "56", height: "56",
+              style: "display:block;width:56px;height:56px;object-fit:cover",
+            }),
+          ])
+        : null;
+
+      const leftCol = h("div", { style: "display:flex;gap:0.75rem;align-items:center;min-width:0" }, [
+        thumb,
+        h("div", { style: "min-width:0;flex:1" }, [
           h("div", { class: "name", text: item.name }),
           h("div", { class: "meta" }, metaChildren),
           item.notes ? h("div", { class: "muted", style: "margin-top:0.25rem", text: item.notes }) : null,
         ]),
+      ]);
+
+      return h("div", { class: "inv-item" }, [
+        leftCol,
         h("div", { style: "display:grid;gap:0.5rem;justify-items:end" }, [qty, actions]),
       ]);
+    }
+
+    // ---------- Photo helpers (client-side resize + lightbox) ----------
+
+    async function resizeImageToJpegBase64(file, maxDim = 800, quality = 0.75) {
+      // Load the image. createImageBitmap handles EXIF orientation on modern browsers.
+      const bitmap = await createImageBitmap(file).catch(async () => {
+        // Fallback for browsers without createImageBitmap on File.
+        const url = URL.createObjectURL(file);
+        try {
+          const img = await new Promise((res, rej) => {
+            const i = new Image();
+            i.onload = () => res(i);
+            i.onerror = rej;
+            i.src = url;
+          });
+          return img;
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      });
+      const srcW = bitmap.width || bitmap.naturalWidth;
+      const srcH = bitmap.height || bitmap.naturalHeight;
+      const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+      const w = Math.max(1, Math.round(srcW * scale));
+      const h = Math.max(1, Math.round(srcH * scale));
+      let blob;
+      if (typeof OffscreenCanvas !== "undefined") {
+        const canvas = new OffscreenCanvas(w, h);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(bitmap, 0, 0, w, h);
+        blob = await canvas.convertToBlob({ type: "image/jpeg", quality });
+      } else {
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
+        blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
+      }
+      if (!blob) throw new Error("Could not encode JPEG.");
+      // Convert blob to base64 (without the "data:...," prefix).
+      const buf = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      // chunk to avoid stack blow on large arrays
+      let bin = "";
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+      }
+      return btoa(bin);
+    }
+
+    async function uploadPhoto(item, file) {
+      const b64 = await resizeImageToJpegBase64(file);
+      const updated = await api(
+        "/api/appliances/" + encodeURIComponent(item.appliance_id) +
+        "/items/" + encodeURIComponent(item.id) + "/photo",
+        { method: "POST", body: { image_base64: b64 } },
+      );
+      // Update the local item in state so the thumbnail re-renders.
+      const idx = state.items.findIndex(i => i.id === updated.id);
+      if (idx >= 0) state.items[idx] = updated;
+      return updated;
+    }
+
+    async function deletePhoto(item) {
+      await api(
+        "/api/appliances/" + encodeURIComponent(item.appliance_id) +
+        "/items/" + encodeURIComponent(item.id) + "/photo",
+        { method: "DELETE" },
+      );
+      const idx = state.items.findIndex(i => i.id === item.id);
+      if (idx >= 0) state.items[idx] = { ...state.items[idx], has_photo: false };
+    }
+
+    function openPhotoLightbox(item) {
+      const img = h("img", {
+        src: "/api/appliances/" + encodeURIComponent(item.appliance_id) +
+             "/items/" + encodeURIComponent(item.id) + "/photo?t=" + Date.now(),
+        alt: item.name,
+        style: "max-width:min(90vw,900px);max-height:85vh;display:block;border-radius:8px;background:#000",
+      });
+      const backdrop = h("div", {
+        class: "dialog-backdrop",
+        onClick: (e) => { if (e.target === backdrop) backdrop.remove(); },
+      }, [
+        h("div", { class: "dialog", style: "padding:0.5rem;background:transparent;border:0;box-shadow:none" }, [img]),
+      ]);
+      document.body.appendChild(backdrop);
+      const esc = (e) => { if (e.key === "Escape") { backdrop.remove(); document.removeEventListener("keydown", esc); } };
+      document.addEventListener("keydown", esc);
     }
 
     function defaultIndividualDelta(unit) {
@@ -1578,6 +1692,57 @@
         );
       }
 
+      // Photo picker state (new file to upload, or "clear existing" flag).
+      const photoState = { file: null, previewUrl: null, deleteExisting: false };
+      const photoPreviewSlot = h("div", { style: "display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap" });
+
+      function rebuildPhotoPreview() {
+        photoPreviewSlot.textContent = "";
+        if (photoState.file && photoState.previewUrl) {
+          photoPreviewSlot.appendChild(h("img", {
+            src: photoState.previewUrl,
+            alt: "New photo preview",
+            style: "width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border)",
+          }));
+          photoPreviewSlot.appendChild(h("button", {
+            type: "button", class: "ghost",
+            onClick: () => {
+              if (photoState.previewUrl) URL.revokeObjectURL(photoState.previewUrl);
+              photoState.file = null; photoState.previewUrl = null;
+              rebuildPhotoPreview();
+            },
+            text: "Remove",
+          }));
+          return;
+        }
+        if (isEdit && existing?.has_photo && !photoState.deleteExisting) {
+          photoPreviewSlot.appendChild(h("img", {
+            src: "/api/appliances/" + encodeURIComponent(existing.appliance_id) +
+                 "/items/" + encodeURIComponent(existing.id) + "/photo",
+            alt: "Current photo",
+            loading: "lazy",
+            style: "width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border)",
+          }));
+          photoPreviewSlot.appendChild(h("button", {
+            type: "button", class: "ghost danger",
+            onClick: () => { photoState.deleteExisting = true; rebuildPhotoPreview(); },
+            text: "Remove current photo",
+          }));
+          return;
+        }
+        if (isEdit && existing?.has_photo && photoState.deleteExisting) {
+          photoPreviewSlot.appendChild(h("span", { class: "muted", text: "Current photo will be removed on save." }));
+          photoPreviewSlot.appendChild(h("button", {
+            type: "button", class: "ghost",
+            onClick: () => { photoState.deleteExisting = false; rebuildPhotoPreview(); },
+            text: "Keep it",
+          }));
+          return;
+        }
+        photoPreviewSlot.appendChild(h("span", { class: "muted", text: "No photo yet." }));
+      }
+      rebuildPhotoPreview();
+
       const trackingFields = h("div");
       function rebuildTrackingFields() {
         trackingFields.textContent = "";
@@ -1624,8 +1789,8 @@
             if (!data.appliance_id) { err.textContent = "Pick an appliance."; return; }
             await withBusy(async () => {
               try {
+                let savedItem;
                 if (isEdit) {
-                  // Edit API only allows metadata changes; status/quantity use dedicated endpoints.
                   const patch = {
                     name: data.name,
                     group_id: data.group_id || null,
@@ -1635,7 +1800,7 @@
                   };
                   if (existing.tracking === "individual") patch.unit = data.unit;
                   if (existing.tracking === "pack") patch.pack_label = data.pack_label;
-                  await api(
+                  savedItem = await api(
                     "/api/appliances/" + encodeURIComponent(existing.appliance_id) +
                     "/items/" + encodeURIComponent(existing.id),
                     { method: "PATCH", body: patch },
@@ -1658,11 +1823,26 @@
                       pack_status: data.pack_status,
                     });
                   }
-                  await api(
+                  savedItem = await api(
                     "/api/appliances/" + encodeURIComponent(data.appliance_id) + "/items",
                     { method: "POST", body },
                   );
                 }
+                // Apply photo change: new upload wins over "delete existing".
+                if (photoState.file) {
+                  try {
+                    await uploadPhoto(savedItem, photoState.file);
+                  } catch (pe) {
+                    toast("Photo upload failed: " + pe.message, "error");
+                  }
+                } else if (isEdit && photoState.deleteExisting && existing?.has_photo) {
+                  try {
+                    await deletePhoto(savedItem);
+                  } catch (pe) {
+                    toast("Photo removal failed: " + pe.message, "error");
+                  }
+                }
+                if (photoState.previewUrl) URL.revokeObjectURL(photoState.previewUrl);
                 await reloadInventory();
                 toast(isEdit ? "Item updated." : "Item added.", "success");
                 closeDialog();
@@ -1703,13 +1883,37 @@
             h("input", { type: "date", value: data.expiration_date,
               onInput: (e) => { data.expiration_date = e.target.value; } }),
           ]),
+          h("label", {}, ["Photo (optional)",
+            h("input", {
+              type: "file", accept: "image/*", capture: "environment",
+              onChange: (e) => {
+                const f = e.target.files && e.target.files[0];
+                if (!f) return;
+                if (!/^image\//.test(f.type)) {
+                  err.textContent = "Please pick an image file.";
+                  return;
+                }
+                if (photoState.previewUrl) URL.revokeObjectURL(photoState.previewUrl);
+                photoState.file = f;
+                photoState.previewUrl = URL.createObjectURL(f);
+                photoState.deleteExisting = false;
+                rebuildPhotoPreview();
+              },
+            }),
+            h("small", { style: "display:block;color:var(--muted);margin-top:0.25rem",
+              text: "Resized to ~800px JPEG before upload. One photo per item." }),
+            photoPreviewSlot,
+          ]),
           h("label", {}, ["Notes (optional)",
             h("textarea", { onInput: (e) => { data.notes = e.target.value; }, text: data.notes }),
           ]),
           err,
         ]),
         actions: [
-          { label: "Cancel", onClick: closeDialog },
+          { label: "Cancel", onClick: () => {
+              if (photoState.previewUrl) URL.revokeObjectURL(photoState.previewUrl);
+              closeDialog();
+            } },
           { label: isEdit ? "Save" : "Add", primary: true, submit: "item-form" },
         ],
       });

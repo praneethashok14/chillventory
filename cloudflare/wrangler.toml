@@ -20,6 +20,14 @@ database_id = "REPLACE_WITH_d1_create_output"
 binding = "SESSIONS"
 id = "REPLACE_WITH_kv_namespace_create_output"
 
+# R2 bucket for item photos. One object per photo:
+#   <account_id>/<item_id>.jpg
+# Create it once with:
+#   wrangler r2 bucket create fridgeflow-photos
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "fridgeflow-photos"
+
 # Static app shell. `npm run prepare` copies the frontend from the repo root
 # into ./public, which Wrangler then serves at /, /manifest.webmanifest, etc.
 [assets]

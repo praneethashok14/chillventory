@@ -210,6 +210,110 @@ async fn wrong_name_or_pin_returns_401() {
 }
 
 #[tokio::test]
+async fn photo_upload_get_and_delete() {
+    use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
+
+    let server = TestServer::start().await;
+    let csrf = signup(&server, "Pranee", "4242").await;
+    let appliance_id = create_appliance(&server, &csrf, "Fridge").await;
+
+    let item: Value = server
+        .client
+        .post(server.url(&format!("/api/appliances/{appliance_id}/items")))
+        .header(CSRF_HEADER, &csrf)
+        .json(&json!({
+            "name": "Milk",
+            "tracking": "individual",
+            "quantity": 1.0,
+            "unit": "L",
+        }))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(item["has_photo"].as_bool(), Some(false));
+    let item_id = item["id"].as_str().unwrap().to_string();
+
+    let jpeg: Vec<u8> = {
+        let mut v = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
+        v.extend_from_slice(b"JFIF\0\x01\x01\0\0\x01\0\x01\0\0");
+        v.extend_from_slice(&[0xFF, 0xD9]);
+        v
+    };
+    let b64 = STANDARD.encode(&jpeg);
+
+    let resp = server
+        .client
+        .post(server.url(&format!(
+            "/api/appliances/{appliance_id}/items/{item_id}/photo"
+        )))
+        .header(CSRF_HEADER, &csrf)
+        .json(&json!({ "image_base64": b64 }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let after: Value = resp.json().await.unwrap();
+    assert_eq!(after["has_photo"].as_bool(), Some(true));
+
+    let resp = server
+        .client
+        .get(server.url(&format!(
+            "/api/appliances/{appliance_id}/items/{item_id}/photo"
+        )))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    assert_eq!(
+        resp.headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "image/jpeg"
+    );
+    let bytes = resp.bytes().await.unwrap();
+    assert_eq!(bytes.as_ref(), jpeg.as_slice());
+
+    let not_jpeg = STANDARD.encode(b"hello world");
+    let resp = server
+        .client
+        .post(server.url(&format!(
+            "/api/appliances/{appliance_id}/items/{item_id}/photo"
+        )))
+        .header(CSRF_HEADER, &csrf)
+        .json(&json!({ "image_base64": not_jpeg }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 400);
+
+    let resp = server
+        .client
+        .delete(server.url(&format!(
+            "/api/appliances/{appliance_id}/items/{item_id}/photo"
+        )))
+        .header(CSRF_HEADER, &csrf)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 204);
+    let resp = server
+        .client
+        .get(server.url(&format!(
+            "/api/appliances/{appliance_id}/items/{item_id}/photo"
+        )))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 404);
+}
+
+#[tokio::test]
 async fn pack_open_conserves_total() {
     let server = TestServer::start().await;
     let csrf = signup(&server, "Pranee", "778899").await;

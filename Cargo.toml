@@ -24,10 +24,12 @@ time = { version = "0.3", features = ["serde", "formatting", "parsing", "macros"
 hex = "0.4"
 subtle = "2"
 mime_guess = "2"
+base64 = "0.22"
 
 [dev-dependencies]
 tempfile = "3"
 reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls"] }
+base64 = "0.22"
 
 [profile.dev]
 opt-level = 0

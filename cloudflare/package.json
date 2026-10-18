@@ -1,0 +1,21 @@
+{
+  "name": "chillventory-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare-assets": "mkdir -p public && cp ../index.html ../manifest.webmanifest ../service-worker.js public/ && rm -rf public/icons && cp -R ../icons public/",
+    "db:init": "wrangler d1 execute chillventory --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute chillventory --local --file=./schema.sql",
+    "dev": "npm run prepare-assets && wrangler dev",
+    "deploy": "npm run prepare-assets && wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^3.90.0"
+  }
+}

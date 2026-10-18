@@ -943,6 +943,60 @@
     function renderDashboard() {
       const main = h("main", { class: "app" });
 
+      // Global search bar — always visible at the top of the dashboard.
+      // Typing anything hides the normal dashboard and shows matching items.
+      const searchInput = h("input", {
+        type: "search",
+        inputmode: "search",
+        placeholder: "Search items, groups, categories, notes…",
+        "aria-label": "Search inventory",
+        value: state.filters.q,
+        onInput: (e) => { state.filters.q = e.target.value; render(); },
+      });
+      const searchCard = h("div", { class: "card", style: "margin-bottom:1rem" }, [
+        h("label", { style: "margin-top:0" }, [
+          h("span", { style: "display:flex;align-items:center;gap:0.5rem;justify-content:space-between" }, [
+            h("span", { text: "Search" }),
+            state.filters.q.trim()
+              ? h("button", {
+                  type: "button", class: "ghost",
+                  onClick: () => { state.filters.q = ""; render(); },
+                  text: "Clear",
+                })
+              : null,
+          ]),
+          searchInput,
+        ]),
+      ]);
+      // Only show the search card if there are items (otherwise it's noise).
+      if (state.items.length > 0 || state.appliances.length > 0) {
+        main.appendChild(searchCard);
+        queueMicrotask(() => {
+          // Preserve caret / focus state when re-rendering during typing.
+          if (state.filters.q) searchInput.focus();
+        });
+      }
+
+      // When the search box has content, show a flat result list instead of
+      // the normal dashboard.
+      if (state.filters.q.trim()) {
+        const matches = applyFilters(state.items);
+        if (matches.length === 0) {
+          main.appendChild(h("div", { class: "card empty" }, [
+            h("h3", { style: "margin-top:0", text: "No matches" }),
+            h("p", { class: "muted", text: `Nothing found for "${state.filters.q.trim()}". Try different terms or clear the search.` }),
+          ]));
+          return main;
+        }
+        const list = h("div", { class: "stack" });
+        for (const i of matches) list.appendChild(renderInventoryItem(i, { showAppliance: true }));
+        main.appendChild(h("section", { class: "card stack", "aria-label": "Search results" }, [
+          h("h2", { style: "margin:0;font-size:1.1rem", text: `${matches.length} result${matches.length === 1 ? "" : "s"}` }),
+          list,
+        ]));
+        return main;
+      }
+
       const totals = computeTotals();
       const stats = h("section", { class: "dash-grid", "aria-label": "Overview" }, [
         statCard("Appliances", state.appliances.length),
@@ -1344,7 +1398,17 @@
         }
         if (q) {
           const groupName = i.group_id ? (state.groups.find(g => g.id === i.group_id)?.name || "") : "";
-          const hay = (i.name + " " + groupName).toLowerCase();
+          const applianceName = state.appliances.find(a => a.id === i.appliance_id)?.name || "";
+          const parts = [
+            i.name,
+            groupName,
+            applianceName,
+            i.category,
+            i.notes,
+            i.tracking === "individual" ? i.unit : i.pack_label,
+            i.tracking === "pack" ? i.pack_status : "",
+          ].filter(Boolean);
+          const hay = parts.join(" ").toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;

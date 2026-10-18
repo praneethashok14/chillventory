@@ -1,4 +1,4 @@
-# Groups and Variants — Chillventory
+# Groups and Variants — Fridgeflow
 
 Implement parent groups that organize related inventory records.
 

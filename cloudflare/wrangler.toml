@@ -1,15 +1,15 @@
-name = "chillventory"
+name = "fridgeflow"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
 # D1 database: holds `accounts` and `inventories` (one JSON blob per account).
 # Create it once with:
-#   wrangler d1 create chillventory
+#   wrangler d1 create fridgeflow
 # then paste the returned database_id below.
 [[d1_databases]]
 binding = "DB"
-database_name = "chillventory"
+database_name = "fridgeflow"
 database_id = "REPLACE_WITH_d1_create_output"
 
 # KV namespace for server-side sessions.

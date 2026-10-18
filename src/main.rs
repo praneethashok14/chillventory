@@ -4,20 +4,20 @@ use std::sync::Arc;
 
 use axum::Router;
 
-use chillventory::accounts::AccountsState;
-use chillventory::routes::{self, AppState};
-use chillventory::static_files;
+use fridgeflow::accounts::AccountsState;
+use fridgeflow::routes::{self, AppState};
+use fridgeflow::static_files;
 
 #[tokio::main]
 async fn main() {
     if let Err(e) = run().await {
-        eprintln!("chillventory: fatal error: {e}");
+        eprintln!("fridgeflow: fatal error: {e}");
         std::process::exit(1);
     }
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let data_dir = std::env::var("CHILLVENTORY_DATA_DIR")
+    let data_dir = std::env::var("FRIDGEFLOW_DATA_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("data"));
     std::fs::create_dir_all(&data_dir)?;
@@ -29,11 +29,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let api = routes::router(state);
     let app: Router = static_files::attach(api);
 
-    let bind = std::env::var("CHILLVENTORY_BIND").unwrap_or_else(|_| "127.0.0.1:8787".to_string());
+    let bind = std::env::var("FRIDGEFLOW_BIND").unwrap_or_else(|_| "127.0.0.1:8787".to_string());
     let addr: SocketAddr = bind.parse()?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let bound = listener.local_addr()?;
-    println!("chillventory listening on http://{bound}");
+    println!("fridgeflow listening on http://{bound}");
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),

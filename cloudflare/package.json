@@ -1,11 +1,11 @@
 {
-  "name": "chillventory-worker",
+  "name": "fridgeflow-worker",
   "private": true,
   "type": "module",
   "scripts": {
     "prepare-assets": "mkdir -p public && cp ../index.html ../manifest.webmanifest ../service-worker.js public/ && rm -rf public/icons && cp -R ../icons public/",
-    "db:init": "wrangler d1 execute chillventory --remote --file=./schema.sql",
-    "db:init:local": "wrangler d1 execute chillventory --local --file=./schema.sql",
+    "db:init": "wrangler d1 execute fridgeflow --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute fridgeflow --local --file=./schema.sql",
     "dev": "npm run prepare-assets && wrangler dev",
     "deploy": "npm run prepare-assets && wrangler deploy",
     "typecheck": "tsc --noEmit"

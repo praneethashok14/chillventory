@@ -1,4 +1,4 @@
-# Inventory Items — Chillventory
+# Inventory Items — Fridgeflow
 
 Users manually create, edit, and delete inventory records.
 

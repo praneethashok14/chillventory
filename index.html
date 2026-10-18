@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
-  <title>Chillventory</title>
+  <title>Fridgeflow</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
   <link rel="apple-touch-icon" href="/icons/icon.svg">
@@ -477,7 +477,7 @@
         opts.body = JSON.stringify(body);
       }
       if (state.csrfToken && method !== "GET" && method !== "HEAD") {
-        opts.headers["x-chillventory-csrf"] = state.csrfToken;
+        opts.headers["x-fridgeflow-csrf"] = state.csrfToken;
       }
       let resp;
       try {
@@ -664,7 +664,7 @@
     }
 
     function buildHeader() {
-      const titleChildren = [h("span", { text: "Chillventory" })];
+      const titleChildren = [h("span", { text: "Fridgeflow" })];
       if (state.authenticated && state.accountName) {
         titleChildren.push(h("span", { class: "pill", style: "margin-left:0.5rem;font-weight:500", text: state.accountName }));
       }
@@ -718,7 +718,7 @@
       const nextTheme = next[current];
       if (nextTheme === "auto") delete document.documentElement.dataset.theme;
       else document.documentElement.dataset.theme = nextTheme;
-      try { localStorage.setItem("chillventory_theme", nextTheme); } catch (_) {}
+      try { localStorage.setItem("fridgeflow_theme", nextTheme); } catch (_) {}
       render();
     }
 
@@ -786,7 +786,7 @@
       const main = h("main", { class: "app" }, [
         h("div", { class: "center-screen" }, [
           h("div", { class: "card stack" }, [
-            h("h2", { style: "margin-top:0", text: "Welcome to Chillventory" }),
+            h("h2", { style: "margin-top:0", text: "Welcome to Fridgeflow" }),
             form,
           ]),
         ]),
@@ -849,7 +849,7 @@
           });
         },
       }, [
-        h("p", { class: "muted", text: "Log in to your Chillventory account." }),
+        h("p", { class: "muted", text: "Log in to your Fridgeflow account." }),
         h("label", {}, ["Account", nameControl]),
         h("label", {}, ["PIN", pinInput]),
         msg,
@@ -864,7 +864,7 @@
       const main = h("main", { class: "app" }, [
         h("div", { class: "center-screen" }, [
           h("div", { class: "card stack" }, [
-            h("h2", { style: "margin-top:0", text: "Chillventory is locked" }),
+            h("h2", { style: "margin-top:0", text: "Fridgeflow is locked" }),
             form,
           ]),
         ]),
@@ -1882,7 +1882,7 @@
 
       main.appendChild(h("div", { class: "card stack" }, [
         h("h3", { style: "margin-top:0", text: "About" }),
-        h("p", { class: "muted", text: "Chillventory stores all data on your own backend. Sessions expire after inactivity." }),
+        h("p", { class: "muted", text: "Fridgeflow stores all data on your own backend. Sessions expire after inactivity." }),
         h("p", { class: "muted", text: "To back up: stop the server and copy data/accounts.json plus the data/accounts/ folder. Each account has its own inventory file under data/accounts/<account-id>/inventory.json." }),
       ]));
 
@@ -1962,7 +1962,7 @@
 
     (function initTheme() {
       try {
-        const stored = localStorage.getItem("chillventory_theme");
+        const stored = localStorage.getItem("fridgeflow_theme");
         if (stored && stored !== "auto") document.documentElement.dataset.theme = stored;
       } catch (_) {}
     })();

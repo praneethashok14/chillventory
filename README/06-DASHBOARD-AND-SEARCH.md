@@ -1,4 +1,4 @@
-# Dashboard, Search, and Expiration — Chillventory
+# Dashboard, Search, and Expiration — Fridgeflow
 
 ## Dashboard
 Show a useful overview of appliances, inventory records, low quantities where meaningful, expired items, and items approaching expiration.

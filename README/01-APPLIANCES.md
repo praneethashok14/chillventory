@@ -1,4 +1,4 @@
-# Appliances — Chillventory
+# Appliances — Fridgeflow
 
 Implement management of multiple storage appliances.
 

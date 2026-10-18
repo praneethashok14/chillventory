@@ -1,4 +1,4 @@
-# PIN Access and Security — Chillventory
+# PIN Access and Security — Fridgeflow
 
 Protect inventory data with a PIN verified by the Rust backend.
 

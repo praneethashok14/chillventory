@@ -5,7 +5,7 @@ use reqwest::StatusCode;
 use serde_json::{json, Value};
 use std::time::Duration;
 
-use chillventory::accounts::CSRF_HEADER;
+use fridgeflow::accounts::CSRF_HEADER;
 
 async fn create_appliance(server: &TestServer, csrf: &str, name: &str) -> String {
     let resp = server
@@ -473,8 +473,8 @@ async fn change_pin_revokes_sessions() {
 
 #[tokio::test]
 async fn persistence_across_restart() {
-    use chillventory::accounts::AccountsState;
-    use chillventory::routes::{self, AppState};
+    use fridgeflow::accounts::AccountsState;
+    use fridgeflow::routes::{self, AppState};
     use std::net::SocketAddr;
     use std::sync::Arc;
 
@@ -485,7 +485,7 @@ async fn persistence_across_restart() {
     {
         let accounts = Arc::new(AccountsState::load(dir.path().join("accounts.json")).unwrap());
         let state = AppState::new(accounts, dir.path().to_path_buf());
-        let app = chillventory::static_files::attach(routes::router(state));
+        let app = fridgeflow::static_files::attach(routes::router(state));
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let server = tokio::spawn(async move {
@@ -529,7 +529,7 @@ async fn persistence_across_restart() {
     // Boot again against the same data dir.
     let accounts = Arc::new(AccountsState::load(dir.path().join("accounts.json")).unwrap());
     let state = AppState::new(accounts, dir.path().to_path_buf());
-    let app = chillventory::static_files::attach(routes::router(state));
+    let app = fridgeflow::static_files::attach(routes::router(state));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {

@@ -1,4 +1,4 @@
-# Rust Backend and JSON Persistence — Chillventory
+# Rust Backend and JSON Persistence — Fridgeflow
 
 ## Stack
 Use Rust, Axum, Tokio, Serde, and serde_json. Keep the implementation maintainable and dependencies minimal.

@@ -1,4 +1,4 @@
-# Chillventory on Cloudflare Workers
+# Fridgeflow on Cloudflare Workers
 
 An optional TypeScript port of the backend that runs the whole app on Cloudflare's edge, using **D1** (SQLite) for durable storage and **KV** for session tokens. The original Rust server at the repo root still works for local development; this directory is independent.
 
@@ -12,7 +12,7 @@ Prereqs: Node 20+, a Cloudflare account.
 cd cloudflare
 npm install
 npx wrangler login                                    # browser OAuth, one time
-npx wrangler d1 create chillventory                   # prints a database_id
+npx wrangler d1 create fridgeflow                   # prints a database_id
 npx wrangler kv:namespace create SESSIONS             # prints an id
 ```
 
@@ -32,7 +32,7 @@ npm run db:init           # runs schema.sql against the remote D1
 npm run deploy
 ```
 
-The `prepare-assets` step copies `index.html`, `manifest.webmanifest`, `service-worker.js`, and `icons/` from the repo root into `cloudflare/public/`, then `wrangler deploy` ships both the Worker and the static shell under one domain. The URL Wrangler prints at the end is where your app lives (something like `https://chillventory.<your-subdomain>.workers.dev`).
+The `prepare-assets` step copies `index.html`, `manifest.webmanifest`, `service-worker.js`, and `icons/` from the repo root into `cloudflare/public/`, then `wrangler deploy` ships both the Worker and the static shell under one domain. The URL Wrangler prints at the end is where your app lives (something like `https://fridgeflow.<your-subdomain>.workers.dev`).
 
 Open it in a browser, create your account, done.
 
@@ -67,7 +67,7 @@ cloudflare/
 ## Backing up your data
 
 ```sh
-npx wrangler d1 export chillventory --remote --output=backup.sql
+npx wrangler d1 export fridgeflow --remote --output=backup.sql
 ```
 
 Restore the same way with `wrangler d1 execute --remote --file=backup.sql`.

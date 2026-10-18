@@ -65,8 +65,8 @@ interface Inventory {
 
 const EMPTY_INVENTORY: Inventory = { appliances: [], groups: [], items: [] };
 
-const SESSION_COOKIE = "chillventory_session";
-const CSRF_HEADER = "x-chillventory-csrf";
+const SESSION_COOKIE = "fridgeflow_session";
+const CSRF_HEADER = "x-fridgeflow-csrf";
 
 // ---------- App ----------
 

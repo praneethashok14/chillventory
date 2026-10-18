@@ -1,4 +1,4 @@
-// Chillventory service worker.
+// Fridgeflow service worker.
 //
 // This worker caches ONLY the public app shell (HTML, manifest, icons, the
 // worker itself). It MUST NEVER cache any /api/* response, because those
@@ -9,7 +9,7 @@
 // Spec references: README/10-PWA-INSTALLATION.md and
 // README/11-PIN-ACCESS-AND-SECURITY.md.
 
-const CACHE_VERSION = "chillventory-shell-v1";
+const CACHE_VERSION = "fridgeflow-shell-v1";
 const SHELL = [
   "/",
   "/index.html",

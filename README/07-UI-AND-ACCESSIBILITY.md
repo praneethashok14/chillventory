@@ -1,4 +1,4 @@
-# UI and Accessibility — Chillventory
+# UI and Accessibility — Fridgeflow
 
 Build a clean, responsive interface for desktop, tablet, and mobile.
 

@@ -1,4 +1,4 @@
-# API and Testing — Chillventory
+# API and Testing — Fridgeflow
 
 ## REST API
 Implement consistent JSON responses and backend validation.

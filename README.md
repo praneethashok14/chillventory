@@ -1,4 +1,4 @@
-# Chillventory
+# Fridgeflow
 
 A PIN-protected, installable PWA for manually tracking food (and anything else) across multiple fridges and freezers. The frontend is a single `index.html` (vanilla JavaScript, no build tools). The backend is a small Rust/Axum/Tokio server that persists everything as JSON on disk.
 
@@ -22,7 +22,7 @@ cargo run --release
 You should see:
 
 ```
-chillventory listening on http://127.0.0.1:8787
+fridgeflow listening on http://127.0.0.1:8787
 ```
 
 Open <http://127.0.0.1:8787> in your browser. On your first visit the UI prompts you to create an account (name + 4–12 digit PIN). The button **"Or log in with existing PIN"** switches to the login form, and the login form has **"Or create a new account"** to switch back.
@@ -31,9 +31,9 @@ Open <http://127.0.0.1:8787> in your browser. On your first visit the UI prompts
 
 | Variable                 | Default            | Purpose                                                                     |
 | ------------------------ | ------------------ | --------------------------------------------------------------------------- |
-| `CHILLVENTORY_BIND`      | `127.0.0.1:8787`   | Address the HTTP server binds to.                                           |
-| `CHILLVENTORY_DATA_DIR`  | `./data`           | Root of all persisted data.                                                 |
-| `CHILLVENTORY_ASSET_DIR` | `.`                | Where `index.html`, `manifest.webmanifest`, `service-worker.js`, and `icons/` live. |
+| `FRIDGEFLOW_BIND`      | `127.0.0.1:8787`   | Address the HTTP server binds to.                                           |
+| `FRIDGEFLOW_DATA_DIR`  | `./data`           | Root of all persisted data.                                                 |
+| `FRIDGEFLOW_ASSET_DIR` | `.`                | Where `index.html`, `manifest.webmanifest`, `service-worker.js`, and `icons/` live. |
 
 By default the server binds **localhost**. See "Remote access" below before changing that.
 
@@ -62,8 +62,8 @@ While the server is **stopped**, copy `data/accounts.json` and the `data/account
 - Account names are 1–60 characters, case-insensitively unique.
 - PINs are 4–12 ASCII digits. Two accounts can share the same PIN; names must differ.
 - PINs are stored only as Argon2 hashes with per-account random salts.
-- A successful login creates a server-side session identified by a random, HttpOnly, SameSite=Strict cookie (`chillventory_session`).
-- Mutations also require a CSRF header (`x-chillventory-csrf`) matching the token issued at login/signup. The frontend sends it automatically.
+- A successful login creates a server-side session identified by a random, HttpOnly, SameSite=Strict cookie (`fridgeflow_session`).
+- Mutations also require a CSRF header (`x-fridgeflow-csrf`) matching the token issued at login/signup. The frontend sends it automatically.
 - Sessions expire after 1 hour of inactivity. Manual lock + change-pin both revoke every active session for the account.
 - Repeated failed login attempts from the same IP are rate-limited with progressive backoff (5s → 30s → 2m → 5m).
 - Wrong **name** and wrong **PIN** both return the same generic `incorrect name or PIN` — the server runs a dummy argon2 verification on unknown names so the timing matches, preventing name enumeration.
@@ -145,9 +145,9 @@ The service worker caches **only** the public app shell (`/`, `index.html`, `man
 
 ## Remote access
 
-The server binds to `127.0.0.1` by default so nothing is reachable from other machines without explicit action. If you want to use Chillventory from your phone on the same Wi-Fi, the recommended pattern is:
+The server binds to `127.0.0.1` by default so nothing is reachable from other machines without explicit action. If you want to use Fridgeflow from your phone on the same Wi-Fi, the recommended pattern is:
 
-1. Set `CHILLVENTORY_BIND=0.0.0.0:8787`.
+1. Set `FRIDGEFLOW_BIND=0.0.0.0:8787`.
 2. Put the server behind a reverse proxy (Caddy, nginx) that terminates **HTTPS** on your LAN.
 3. Restrict access with your router's firewall or a VPN.
 

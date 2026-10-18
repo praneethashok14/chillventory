@@ -1,6 +1,6 @@
 {
-  "name": "Chillventory",
-  "short_name": "Chillventory",
+  "name": "Fridgeflow",
+  "short_name": "Fridgeflow",
   "description": "PIN-protected inventory tracking for your fridges and freezers.",
   "start_url": "/",
   "scope": "/",

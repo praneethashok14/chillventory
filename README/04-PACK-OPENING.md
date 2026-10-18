@@ -1,4 +1,4 @@
-# Pack Opening Actions — Chillventory
+# Pack Opening Actions — Fridgeflow
 
 Every unopened pack variant with a pack count greater than zero must offer:
 1. Mark ×1 Open

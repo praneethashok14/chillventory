@@ -226,7 +226,7 @@ fn session_cookie_header(session: &SessionInfo) -> HeaderValue {
 }
 
 fn clear_session_cookie_header() -> HeaderValue {
-    HeaderValue::from_static("chillventory_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0")
+    HeaderValue::from_static("fridgeflow_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0")
 }
 
 fn session_json(session: &SessionInfo, account_name: Option<String>) -> serde_json::Value {

@@ -1,12 +1,12 @@
 [package]
-name = "chillventory"
+name = "fridgeflow"
 version = "0.1.0"
 edition = "2021"
 description = "PIN-protected PWA for tracking food inventory across fridges and freezers."
 license = "MIT"
 
 [[bin]]
-name = "chillventory"
+name = "fridgeflow"
 path = "src/main.rs"
 
 [dependencies]

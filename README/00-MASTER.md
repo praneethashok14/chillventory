@@ -1,7 +1,7 @@
-# Chillventory — Master Specification
+# Fridgeflow — Master Specification
 
 ## Mission
-Build Chillventory: an installable, PIN-protected website for manually tracking food and other items in multiple fridges and freezers.
+Build Fridgeflow: an installable, PIN-protected website for manually tracking food and other items in multiple fridges and freezers.
 
 Read every specification from 01 through 11 before implementing anything. Treat them as one coherent application, not separate projects.
 
@@ -47,7 +47,7 @@ Individual-quantity items track an amount and unit. Pack-based variants track a 
 - Provide clear errors, loading states, empty states, and destructive-action confirmations.
 
 ## Suggested project structure
-chillventory/
+fridgeflow/
   Cargo.toml
   Cargo.lock
   README.md

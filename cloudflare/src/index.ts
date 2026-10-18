@@ -6,7 +6,6 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 export interface Env {
   DB: D1Database;
   SESSIONS: KVNamespace;
-  PHOTOS: R2Bucket;
   ASSETS: Fetcher;
   SESSION_TTL_SECONDS?: string;
   PBKDF2_ITERATIONS?: string;
@@ -724,8 +723,12 @@ app.delete("/api/appliances/:id/items/:item_id", async (c) => {
         throw new HttpErr(404, `item ${itemId} not found`);
       }
     });
-    // Best-effort R2 photo cleanup; absent object is not an error.
-    await c.env.PHOTOS.delete(photoKey(session.account_id, itemId));
+    // Best-effort photo cleanup; absent row is not an error.
+    await c.env.DB.prepare(
+      "DELETE FROM item_photos WHERE account_id = ? AND item_id = ?",
+    )
+      .bind(session.account_id, itemId)
+      .run();
     return c.body(null, 204);
   } catch (e) {
     return httpErrorResponse(c, e);
@@ -1041,13 +1044,9 @@ function httpErrorResponse(c: any, e: unknown): Response {
   return jsonError(c, 500, "internal", "unexpected error");
 }
 
-// ---------- Photos ----------
+// ---------- Photos (stored as BLOBs in D1) ----------
 
 const MAX_PHOTO_BYTES_B64 = 2 * 1024 * 1024;
-
-function photoKey(accountId: string, itemId: string): string {
-  return `${accountId}/${itemId}.jpg`;
-}
 
 function looksLikeJpeg(bytes: Uint8Array): boolean {
   return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -1092,9 +1091,14 @@ app.post("/api/appliances/:id/items/:item_id/photo", async (c) => {
       item.updated_at = nowIso();
       return item;
     });
-    await c.env.PHOTOS.put(photoKey(session.account_id, itemId), bytes, {
-      httpMetadata: { contentType: "image/jpeg" },
-    });
+    await c.env.DB.prepare(
+      `INSERT INTO item_photos (account_id, item_id, data, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(account_id, item_id) DO UPDATE
+         SET data = excluded.data, updated_at = excluded.updated_at`,
+    )
+      .bind(session.account_id, itemId, bytes, nowIso())
+      .run();
     return c.json(updated);
   } catch (e) {
     return httpErrorResponse(c, e);
@@ -1111,9 +1115,14 @@ app.get("/api/appliances/:id/items/:item_id/photo", async (c) => {
   if (!inv.items.some((x) => x.id === itemId && x.appliance_id === applianceId)) {
     return jsonError(c, 404, "not_found", `item ${itemId} not found`);
   }
-  const obj = await c.env.PHOTOS.get(photoKey(session.account_id, itemId));
-  if (!obj) return jsonError(c, 404, "not_found", "photo not found");
-  return new Response(obj.body, {
+  const row = await c.env.DB.prepare(
+    "SELECT data FROM item_photos WHERE account_id = ? AND item_id = ?",
+  )
+    .bind(session.account_id, itemId)
+    .first<{ data: ArrayBuffer }>();
+  if (!row) return jsonError(c, 404, "not_found", "photo not found");
+  // D1 returns BLOB columns as ArrayBuffer; stream it back as image/jpeg.
+  return new Response(row.data, {
     headers: {
       "content-type": "image/jpeg",
       "cache-control": "private, no-store",
@@ -1138,7 +1147,11 @@ app.delete("/api/appliances/:id/items/:item_id/photo", async (c) => {
       item.has_photo = false;
       item.updated_at = nowIso();
     });
-    await c.env.PHOTOS.delete(photoKey(session.account_id, itemId));
+    await c.env.DB.prepare(
+      "DELETE FROM item_photos WHERE account_id = ? AND item_id = ?",
+    )
+      .bind(session.account_id, itemId)
+      .run();
     return c.body(null, 204);
   } catch (e) {
     return httpErrorResponse(c, e);

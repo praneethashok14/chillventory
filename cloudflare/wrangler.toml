@@ -10,7 +10,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "fridgeflow"
-database_id = "REPLACE_WITH_d1_create_output"
+database_id = "e003330b-9642-4c64-ae13-f02d2ca819a5"
 
 # KV namespace for server-side sessions.
 # Create it once with:
@@ -18,15 +18,7 @@ database_id = "REPLACE_WITH_d1_create_output"
 # then paste the returned id below.
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "REPLACE_WITH_kv_namespace_create_output"
-
-# R2 bucket for item photos. One object per photo:
-#   <account_id>/<item_id>.jpg
-# Create it once with:
-#   wrangler r2 bucket create fridgeflow-photos
-[[r2_buckets]]
-binding = "PHOTOS"
-bucket_name = "fridgeflow-photos"
+id = "7a1c5aa51a9043aab3d4d0fe33f4de5a"
 
 # Static app shell. `npm run prepare` copies the frontend from the repo root
 # into ./public, which Wrangler then serves at /, /manifest.webmanifest, etc.
@@ -38,4 +30,8 @@ not_found_handling = "single-page-application"
 # Optional: override the Argon2 cost + session TTL at build time if you want.
 [vars]
 SESSION_TTL_SECONDS = "3600"
-PBKDF2_ITERATIONS = "500000"
+# Cloudflare Workers' SubtleCrypto caps PBKDF2 at 100000 iterations.
+# Still comfortably above the NIST SP 800-132 floor; combined with
+# Cloudflare's platform rate-limiting on /api/auth/* this is adequate
+# for a family-scale app with 4-12 digit PINs.
+PBKDF2_ITERATIONS = "100000"

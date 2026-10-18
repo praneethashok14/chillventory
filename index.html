@@ -861,27 +861,14 @@
     }
 
     function renderLogin() {
-      let name = state.accountNames[0] || "";
+      let name = "";
       let pin = "";
-      // Prefer a dropdown of known names when the server exposes them, with
-      // the option to type a name instead (in case the user wants to log in
-      // to an account not shown on this device yet).
-      let nameControl;
-      if (state.accountNames.length > 0) {
-        const sel = h("select", { onChange: (e) => { name = e.target.value; } });
-        for (const n of state.accountNames) {
-          const opt = h("option", { value: n, text: n });
-          if (n === name) opt.selected = true;
-          sel.appendChild(opt);
-        }
-        nameControl = sel;
-      } else {
-        nameControl = h("input", {
-          type: "text", maxlength: "60", required: true,
-          autocomplete: "username",
-          onInput: (e) => { name = e.target.value; },
-        });
-      }
+      const nameControl = h("input", {
+        type: "text", maxlength: "60", required: true,
+        autocomplete: "username",
+        placeholder: "Account name",
+        onInput: (e) => { name = e.target.value; },
+      });
       const pinInput = h("input", {
         type: "password", inputmode: "numeric", pattern: "[0-9]*", autocomplete: "current-password",
         maxlength: "12", required: true, class: "pin-input",
@@ -894,7 +881,7 @@
         onSubmit: async (e) => {
           e.preventDefault();
           msg.textContent = "";
-          if (!name || !name.trim()) { msg.textContent = "Please pick an account."; return; }
+          if (!name || !name.trim()) { msg.textContent = "Enter your account name."; return; }
           if (!/^\d{4,12}$/.test(pin)) { msg.textContent = "Enter the 4–12 digit PIN."; return; }
           await withBusy(async () => {
             try {
@@ -934,7 +921,7 @@
           ]),
         ]),
       ]);
-      queueMicrotask(() => (state.accountNames.length === 0 ? nameControl : pinInput).focus());
+      queueMicrotask(() => nameControl.focus());
       return main;
     }
 

@@ -1,0 +1,1996 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Chillventory</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="apple-touch-icon" href="/icons/icon.svg">
+  <meta name="theme-color" content="#0b5fff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --surface: #ffffff;
+      --surface-2: #eef1f8;
+      --text: #11182c;
+      --muted: #5a647a;
+      --border: #d9dee9;
+      --accent: #0b5fff;
+      --accent-text: #ffffff;
+      --danger: #c0303a;
+      --danger-bg: #fdecee;
+      --warning: #a85e00;
+      --warning-bg: #fff3dc;
+      --success: #0e7c3a;
+      --success-bg: #e7f6ec;
+      --focus: #0b5fff;
+      --radius: 10px;
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b1220;
+        --surface: #141c33;
+        --surface-2: #1b2544;
+        --text: #e7ecf8;
+        --muted: #8a94af;
+        --border: #2a3457;
+        --accent: #4d8bff;
+        --accent-text: #0b1220;
+        --danger: #ff8089;
+        --danger-bg: #3b1d22;
+        --warning: #ffbe55;
+        --warning-bg: #3a2a0a;
+        --success: #6cd38f;
+        --success-bg: #0f2a1b;
+        --focus: #4d8bff;
+      }
+    }
+    html[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f6f7fb; --surface: #fff; --surface-2: #eef1f8; --text: #11182c; --muted: #5a647a;
+      --border: #d9dee9; --accent: #0b5fff; --accent-text: #fff;
+      --danger: #c0303a; --danger-bg: #fdecee; --warning: #a85e00; --warning-bg: #fff3dc;
+      --success: #0e7c3a; --success-bg: #e7f6ec; --focus: #0b5fff;
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0b1220; --surface: #141c33; --surface-2: #1b2544; --text: #e7ecf8; --muted: #8a94af;
+      --border: #2a3457; --accent: #4d8bff; --accent-text: #0b1220;
+      --danger: #ff8089; --danger-bg: #3b1d22; --warning: #ffbe55; --warning-bg: #3a2a0a;
+      --success: #6cd38f; --success-bg: #0f2a1b; --focus: #4d8bff;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; animation: none !important; }
+    }
+    a { color: var(--accent); }
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+    button {
+      font: inherit;
+      cursor: pointer;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      padding: 0.5rem 0.9rem;
+      min-height: 40px;
+    }
+    button:hover:not(:disabled) { background: var(--surface-2); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+    button.primary:hover:not(:disabled) { filter: brightness(1.05); background: var(--accent); }
+    button.danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+    button.ghost { background: transparent; }
+    button.icon {
+      min-width: 40px;
+      min-height: 40px;
+      padding: 0;
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    input, select, textarea {
+      font: inherit;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.5rem 0.7rem;
+      min-height: 40px;
+      width: 100%;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    label { display: block; margin-top: 0.75rem; font-weight: 600; }
+    label > small { display: block; font-weight: 400; color: var(--muted); margin-top: 0.1rem; }
+    .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .stack { display: grid; gap: 0.75rem; }
+    .muted { color: var(--muted); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+    .pill.danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+    .pill.warning { background: var(--warning-bg); color: var(--warning); border-color: var(--warning); }
+    .pill.success { background: var(--success-bg); color: var(--success); border-color: var(--success); }
+    .pill.accent { background: var(--surface); color: var(--accent); border-color: var(--accent); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      box-shadow: var(--shadow);
+    }
+    .layout {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+    header.app {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header.app h1 {
+      font-size: 1.1rem;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    nav.main {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+    nav.main button[aria-current="page"] {
+      background: var(--accent);
+      color: var(--accent-text);
+      border-color: var(--accent);
+    }
+    main.app {
+      padding: 1rem;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .toasts {
+      position: fixed;
+      inset: auto 1rem 1rem auto;
+      z-index: 100;
+      display: grid;
+      gap: 0.5rem;
+      max-width: 420px;
+    }
+    .toast {
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .toast.error { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+    .toast.success { border-color: var(--success); color: var(--success); background: var(--success-bg); }
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 15, 30, 0.55);
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      z-index: 50;
+    }
+    .dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: var(--shadow);
+    }
+    .dialog h2 { margin-top: 0; }
+    .center-screen {
+      display: grid;
+      place-items: center;
+      min-height: 70vh;
+    }
+    .center-screen .card { max-width: 420px; width: 100%; }
+    .pin-input {
+      font-size: 1.6rem;
+      letter-spacing: 0.4rem;
+      text-align: center;
+    }
+    .inv-group {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .inv-group summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface-2);
+      cursor: pointer;
+    }
+    .inv-group summary::-webkit-details-marker { display: none; }
+    .inv-group summary::before {
+      content: "▸";
+      display: inline-block;
+      transition: transform 0.15s;
+      color: var(--muted);
+    }
+    .inv-group[open] summary::before { transform: rotate(90deg); }
+    .inv-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border);
+      align-items: center;
+    }
+    .inv-item .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+      margin-top: 0.25rem;
+    }
+    .inv-item .name { font-weight: 600; }
+    .qty-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .qty-value {
+      min-width: 3.5rem;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+    .inv-actions {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .filters {
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      margin-bottom: 1rem;
+    }
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .dash-stat .big {
+      font-size: 1.8rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .dash-stat.danger .big { color: var(--danger); }
+    .dash-stat.warning .big { color: var(--warning); }
+    .empty {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--muted);
+    }
+    .loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 1rem;
+      height: 1rem;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    @media (max-width: 540px) {
+      header.app { flex-wrap: wrap; }
+      nav.main { width: 100%; justify-content: space-around; margin-left: 0; }
+      .inv-item { grid-template-columns: 1fr; }
+      .inv-actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout" id="root">
+    <div aria-live="polite" aria-atomic="true" class="sr-only" id="live"></div>
+    <!-- header + main injected by render() -->
+  </div>
+  <div class="toasts" id="toasts" aria-live="assertive" aria-atomic="false"></div>
+  <div id="busy" class="loading" hidden style="position:fixed;top:0.6rem;right:0.6rem;z-index:200;padding:0.3rem 0.6rem;background:var(--surface);border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow)">
+    <span class="spinner" aria-hidden="true"></span>
+    <span>Saving…</span>
+  </div>
+
+  <script>
+    "use strict";
+
+    // ---------- utilities ----------
+
+    const $root = document.getElementById("root");
+    const $toasts = document.getElementById("toasts");
+    const $live = document.getElementById("live");
+
+    /** Create a DOM element with safe text content (never innerHTML). */
+    function h(tag, attrs = {}, children = []) {
+      const el = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs || {})) {
+        if (v == null || v === false) continue;
+        if (k === "class") el.className = v;
+        else if (k === "html") throw new Error("innerHTML not permitted");
+        else if (k === "text") el.textContent = v;
+        else if (k === "dataset") {
+          for (const [dk, dv] of Object.entries(v)) el.dataset[dk] = dv;
+        } else if (k.startsWith("on") && typeof v === "function") {
+          el.addEventListener(k.slice(2).toLowerCase(), v);
+        } else if (v === true) el.setAttribute(k, "");
+        else el.setAttribute(k, v);
+      }
+      const list = Array.isArray(children) ? children : [children];
+      for (const c of list) {
+        if (c == null || c === false) continue;
+        if (typeof c === "string" || typeof c === "number") {
+          el.appendChild(document.createTextNode(String(c)));
+        } else if (c instanceof Node) {
+          el.appendChild(c);
+        }
+      }
+      return el;
+    }
+
+    function toast(message, kind = "info") {
+      const el = h("div", { class: "toast " + kind, role: "status", text: message });
+      $toasts.appendChild(el);
+      setTimeout(() => el.remove(), 4500);
+      $live.textContent = message;
+    }
+
+    function announce(msg) {
+      $live.textContent = msg;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "";
+      // ISO date "YYYY-MM-DD"; render as local day for user clarity.
+      const [y, m, d] = iso.split("-").map(Number);
+      if (!y || !m || !d) return iso;
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    }
+
+    function expirationState(iso) {
+      if (!iso) return "none";
+      const [y, m, d] = iso.split("-").map(Number);
+      if (!y) return "none";
+      const target = new Date(y, m - 1, d);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      target.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((target - today) / 86400000);
+      if (diffDays < 0) return "expired";
+      if (diffDays <= 7) return "soon";
+      return "ok";
+    }
+
+    // ---------- state ----------
+
+    const state = {
+      authenticated: false,
+      hasAccounts: false,
+      accountNames: [],
+      accountId: null,
+      accountName: null,
+      authMode: "auto",   // "signup" | "login" | "auto" (picked by hasAccounts)
+      csrfToken: null,
+      view: "dashboard",
+      activeApplianceId: null,
+      appliances: [],
+      groups: [],
+      items: [],
+      filters: { q: "", applianceId: "", category: "", tracking: "", packStatus: "", expiration: "" },
+      sort: "name",
+      busyCount: 0,
+      busyItems: new Set(),
+    };
+
+    function withBusy(fn) {
+      state.busyCount++;
+      updateBusyIndicator();
+      return Promise.resolve()
+        .then(fn)
+        .finally(() => {
+          state.busyCount = Math.max(0, state.busyCount - 1);
+          updateBusyIndicator();
+        });
+    }
+
+    function updateBusyIndicator() {
+      const el = document.getElementById("busy");
+      if (!el) return;
+      el.hidden = state.busyCount === 0;
+    }
+
+    // ---------- api ----------
+
+    async function api(path, { method = "GET", body = null } = {}) {
+      if (/\/(undefined|null)(\/|$|\?)/.test(path)) {
+        console.error("api(): refusing to call URL with undefined/null id segment:", path);
+        throw new ApiError(
+          "Internal error: tried to call " + path + ". Please reload the app.",
+          0,
+          { client: true },
+        );
+      }
+      const opts = {
+        method,
+        credentials: "same-origin",
+        headers: { "accept": "application/json" },
+      };
+      if (body !== null) {
+        opts.headers["content-type"] = "application/json";
+        opts.body = JSON.stringify(body);
+      }
+      if (state.csrfToken && method !== "GET" && method !== "HEAD") {
+        opts.headers["x-chillventory-csrf"] = state.csrfToken;
+      }
+      let resp;
+      try {
+        resp = await fetch(path, opts);
+      } catch (err) {
+        throw new ApiError("Network error. Is the backend running?", 0, { network: true });
+      }
+      if (resp.status === 401) {
+        // Session expired or missing. Force relock without wiping the configured flag.
+        state.authenticated = false;
+        state.csrfToken = null;
+        wipePrivateState();
+        render();
+      }
+      if (resp.status === 204) return null;
+      const ct = resp.headers.get("content-type") || "";
+      const data = ct.includes("application/json") ? await resp.json() : await resp.text();
+      if (!resp.ok) {
+        const msg = data && data.error ? data.error.message : (typeof data === "string" ? data : resp.statusText);
+        const code = data && data.error ? data.error.code : null;
+        throw new ApiError(msg || "Request failed", resp.status, { code, data });
+      }
+      return data;
+    }
+
+    class ApiError extends Error {
+      constructor(message, status, extra = {}) {
+        super(message);
+        this.status = status;
+        Object.assign(this, extra);
+      }
+    }
+
+    function wipePrivateState() {
+      state.appliances = [];
+      state.groups = [];
+      state.items = [];
+      state.activeApplianceId = null;
+      state.busyItems.clear();
+    }
+
+    // ---------- auth flow ----------
+
+    async function checkAuth() {
+      try {
+        const status = await api("/api/auth/status");
+        state.hasAccounts = !!status.has_accounts;
+        state.accountNames = Array.isArray(status.account_names) ? status.account_names : [];
+      } catch (e) {
+        state.hasAccounts = false;
+        state.accountNames = [];
+      }
+      try {
+        const sess = await api("/api/auth/session");
+        if (sess && sess.authenticated) {
+          state.authenticated = true;
+          state.csrfToken = sess.csrf_token || null;
+          state.accountId = sess.account_id || null;
+          state.accountName = sess.account_name || null;
+          await reloadInventory();
+        }
+      } catch (_) {
+        /* session endpoint failures mean "not authenticated" */
+      }
+    }
+
+    async function signup(name, pin) {
+      const resp = await api("/api/auth/signup", { method: "POST", body: { name, pin } });
+      state.authenticated = true;
+      state.hasAccounts = true;
+      state.csrfToken = resp.csrf_token || null;
+      state.accountId = resp.account_id || null;
+      state.accountName = resp.account_name || null;
+      try {
+        await reloadInventory();
+      } catch (err) {
+        if (err.status === 401) {
+          throw new ApiError(
+            "Account was created but the session cookie was blocked by the browser. " +
+            "Enable cookies for this site and reload.",
+            401,
+          );
+        }
+        throw err;
+      }
+    }
+
+    async function login(name, pin) {
+      const resp = await api("/api/auth/login", { method: "POST", body: { name, pin } });
+      state.authenticated = true;
+      state.csrfToken = resp.csrf_token || null;
+      state.accountId = resp.account_id || null;
+      state.accountName = resp.account_name || null;
+      try {
+        await reloadInventory();
+      } catch (err) {
+        if (err.status === 401) {
+          throw new ApiError(
+            "Logged in but the session cookie was blocked by the browser. " +
+            "Enable cookies for this site and reload.",
+            401,
+          );
+        }
+        throw err;
+      }
+    }
+
+    async function lock() {
+      try {
+        await api("/api/auth/lock", { method: "POST" });
+      } catch (_) {
+        // Lock on the client regardless.
+      }
+      state.authenticated = false;
+      state.csrfToken = null;
+      state.accountId = null;
+      state.accountName = null;
+      wipePrivateState();
+      // Refresh account list for the login screen.
+      try {
+        const status = await api("/api/auth/status");
+        state.hasAccounts = !!status.has_accounts;
+        state.accountNames = Array.isArray(status.account_names) ? status.account_names : [];
+      } catch (_) {}
+      state.authMode = "login";
+      render();
+      announce("Session locked.");
+    }
+
+    async function changePin(current_pin, new_pin) {
+      await api("/api/auth/change-pin", { method: "POST", body: { current_pin, new_pin } });
+      state.authenticated = false;
+      state.csrfToken = null;
+      wipePrivateState();
+      render();
+    }
+
+    // ---------- data loaders ----------
+
+    async function reloadInventory() {
+      const data = await api("/api/items");
+      state.items = data.items || [];
+      state.groups = data.groups || [];
+      state.appliances = data.appliances || [];
+    }
+
+    // ---------- rendering ----------
+
+    let renderScheduled = false;
+    function renderIfIdle() {
+      if (renderScheduled) return;
+      renderScheduled = true;
+      queueMicrotask(() => {
+        renderScheduled = false;
+        render();
+      });
+    }
+
+    function render() {
+      $root.textContent = "";
+      $root.appendChild(buildHeader());
+
+      // The live region is removed when $root is cleared; re-attach it.
+      $root.appendChild($live);
+
+      let main;
+      if (!state.authenticated) {
+        // Pick signup vs login based on whether any accounts exist, unless the
+        // user has explicitly toggled.
+        const mode = state.authMode === "auto"
+          ? (state.hasAccounts ? "login" : "signup")
+          : state.authMode;
+        main = mode === "signup" ? renderSignup() : renderLogin();
+      } else {
+        switch (state.view) {
+          case "appliances": main = renderAppliances(); break;
+          case "appliance": main = renderApplianceDetail(); break;
+          case "inventory": main = renderGlobalInventory(); break;
+          case "settings": main = renderSettings(); break;
+          default: main = renderDashboard();
+        }
+      }
+      $root.appendChild(main);
+    }
+
+    function buildHeader() {
+      const titleChildren = [h("span", { text: "Chillventory" })];
+      if (state.authenticated && state.accountName) {
+        titleChildren.push(h("span", { class: "pill", style: "margin-left:0.5rem;font-weight:500", text: state.accountName }));
+      }
+      const title = h("h1", {}, titleChildren);
+
+      const nav = h("nav", { class: "main", "aria-label": "Primary" });
+      if (state.authenticated) {
+        for (const [view, label] of [
+          ["dashboard", "Dashboard"],
+          ["appliances", "Appliances"],
+          ["inventory", "All Inventory"],
+          ["settings", "Settings"],
+        ]) {
+          nav.appendChild(
+            h("button", {
+              type: "button",
+              "aria-current": state.view === view ? "page" : null,
+              onClick: () => { state.view = view; state.activeApplianceId = null; render(); },
+              text: label,
+            }),
+          );
+        }
+        nav.appendChild(
+          h("button", {
+            type: "button",
+            class: "ghost",
+            title: "Lock",
+            onClick: () => lock(),
+            text: "Lock",
+          }),
+        );
+      }
+
+      // Theme toggle
+      const currentTheme = document.documentElement.dataset.theme || "auto";
+      const themeBtn = h("button", {
+        type: "button",
+        class: "icon ghost",
+        "aria-label": "Toggle theme (current: " + currentTheme + ")",
+        onClick: cycleTheme,
+        text: currentTheme === "dark" ? "☾" : (currentTheme === "light" ? "☀" : "◐"),
+      });
+
+      const header = h("header", { class: "app" }, [title, nav, themeBtn]);
+      return header;
+    }
+
+    function cycleTheme() {
+      const next = { auto: "light", light: "dark", dark: "auto" };
+      const current = document.documentElement.dataset.theme || "auto";
+      const nextTheme = next[current];
+      if (nextTheme === "auto") delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = nextTheme;
+      try { localStorage.setItem("chillventory_theme", nextTheme); } catch (_) {}
+      render();
+    }
+
+    // ---------- auth screens ----------
+
+    function renderSignup() {
+      let name = "", pin = "", confirm = "";
+      const nameInput = h("input", {
+        type: "text", maxlength: "60", required: true,
+        autocomplete: "username",
+        placeholder: "e.g. Pranee",
+        onInput: (e) => { name = e.target.value; },
+      });
+      const pinInput = h("input", {
+        type: "password", inputmode: "numeric", pattern: "[0-9]*", autocomplete: "new-password",
+        maxlength: "12", required: true, class: "pin-input",
+        "aria-label": "New PIN",
+        onInput: (e) => { pin = e.target.value; },
+      });
+      const confirmInput = h("input", {
+        type: "password", inputmode: "numeric", pattern: "[0-9]*", autocomplete: "new-password",
+        maxlength: "12", required: true, class: "pin-input",
+        "aria-label": "Confirm PIN",
+        onInput: (e) => { confirm = e.target.value; },
+      });
+      const msg = h("div", { class: "muted", role: "alert" });
+
+      const form = h("form", {
+        onSubmit: async (e) => {
+          e.preventDefault();
+          msg.textContent = "";
+          if (!name.trim()) { msg.textContent = "Please enter a name."; return; }
+          if (!/^\d{4,12}$/.test(pin)) { msg.textContent = "PIN must be 4–12 digits."; return; }
+          if (pin !== confirm) { msg.textContent = "PINs don't match."; return; }
+          await withBusy(async () => {
+            try {
+              await signup(name.trim(), pin);
+              toast(`Welcome, ${state.accountName}!`, "success");
+              render();
+            } catch (err) {
+              const text = err.status === 409
+                ? "That name is already in use. Try another, or log in with an existing PIN."
+                : (err.message || "Could not create account.");
+              msg.textContent = text;
+              toast(text, "error");
+            }
+          });
+        },
+      }, [
+        h("p", { class: "muted", text: "Create your account with a name and a 4–12 digit PIN. Each account has its own private inventory." }),
+        h("label", {}, ["Name", nameInput]),
+        h("label", {}, ["New PIN", pinInput]),
+        h("label", {}, ["Confirm PIN", confirmInput]),
+        msg,
+        h("div", { class: "row", style: "justify-content:space-between;margin-top:0.75rem;gap:0.5rem;flex-wrap:wrap" }, [
+          state.hasAccounts
+            ? h("button", { type: "button", class: "ghost",
+                onClick: () => { state.authMode = "login"; render(); },
+                text: "Or log in with existing PIN" })
+            : h("span", {}),
+          h("button", { type: "submit", class: "primary", text: "Create account" }),
+        ]),
+      ]);
+
+      const main = h("main", { class: "app" }, [
+        h("div", { class: "center-screen" }, [
+          h("div", { class: "card stack" }, [
+            h("h2", { style: "margin-top:0", text: "Welcome to Chillventory" }),
+            form,
+          ]),
+        ]),
+      ]);
+      queueMicrotask(() => nameInput.focus());
+      return main;
+    }
+
+    function renderLogin() {
+      let name = state.accountNames[0] || "";
+      let pin = "";
+      // Prefer a dropdown of known names when the server exposes them, with
+      // the option to type a name instead (in case the user wants to log in
+      // to an account not shown on this device yet).
+      let nameControl;
+      if (state.accountNames.length > 0) {
+        const sel = h("select", { onChange: (e) => { name = e.target.value; } });
+        for (const n of state.accountNames) {
+          const opt = h("option", { value: n, text: n });
+          if (n === name) opt.selected = true;
+          sel.appendChild(opt);
+        }
+        nameControl = sel;
+      } else {
+        nameControl = h("input", {
+          type: "text", maxlength: "60", required: true,
+          autocomplete: "username",
+          onInput: (e) => { name = e.target.value; },
+        });
+      }
+      const pinInput = h("input", {
+        type: "password", inputmode: "numeric", pattern: "[0-9]*", autocomplete: "current-password",
+        maxlength: "12", required: true, class: "pin-input",
+        "aria-label": "PIN",
+        onInput: (e) => { pin = e.target.value; },
+      });
+      const msg = h("div", { role: "alert" });
+
+      const form = h("form", {
+        onSubmit: async (e) => {
+          e.preventDefault();
+          msg.textContent = "";
+          if (!name || !name.trim()) { msg.textContent = "Please pick an account."; return; }
+          if (!/^\d{4,12}$/.test(pin)) { msg.textContent = "Enter the 4–12 digit PIN."; return; }
+          await withBusy(async () => {
+            try {
+              await login(name.trim(), pin);
+              toast(`Welcome back, ${state.accountName}.`, "success");
+              render();
+            } catch (err) {
+              const text = err.status === 429
+                ? "Too many attempts. Please wait a bit before trying again."
+                : err.status === 0
+                  ? "Could not reach the server."
+                  : "Incorrect name or PIN.";
+              msg.textContent = text;
+              toast(text, "error");
+              try { pinInput.focus(); pinInput.select(); } catch (_) {}
+            }
+          });
+        },
+      }, [
+        h("p", { class: "muted", text: "Log in to your Chillventory account." }),
+        h("label", {}, ["Account", nameControl]),
+        h("label", {}, ["PIN", pinInput]),
+        msg,
+        h("div", { class: "row", style: "justify-content:space-between;margin-top:0.75rem;gap:0.5rem;flex-wrap:wrap" }, [
+          h("button", { type: "button", class: "ghost",
+            onClick: () => { state.authMode = "signup"; render(); },
+            text: "Or create a new account" }),
+          h("button", { type: "submit", class: "primary", text: "Log in" }),
+        ]),
+      ]);
+
+      const main = h("main", { class: "app" }, [
+        h("div", { class: "center-screen" }, [
+          h("div", { class: "card stack" }, [
+            h("h2", { style: "margin-top:0", text: "Chillventory is locked" }),
+            form,
+          ]),
+        ]),
+      ]);
+      queueMicrotask(() => (state.accountNames.length === 0 ? nameControl : pinInput).focus());
+      return main;
+    }
+
+    // ---------- dashboard ----------
+
+    function renderDashboard() {
+      const main = h("main", { class: "app" });
+
+      const totals = computeTotals();
+      const stats = h("section", { class: "dash-grid", "aria-label": "Overview" }, [
+        statCard("Appliances", state.appliances.length),
+        statCard("Groups", state.groups.length),
+        statCard("Items", state.items.length),
+        statCard("Expired", totals.expired, "danger"),
+        statCard("Expiring in ≤ 7 days", totals.soon, "warning"),
+      ]);
+      main.appendChild(stats);
+
+      if (state.appliances.length === 0) {
+        main.appendChild(emptyState(
+          "No appliances yet",
+          "Start by adding a fridge or freezer.",
+          () => { state.view = "appliances"; render(); },
+          "Add an appliance",
+        ));
+        return main;
+      }
+
+      // Expiring soon section
+      const soonItems = state.items
+        .map(i => ({ i, state: expirationState(i.expiration_date) }))
+        .filter(x => x.state === "expired" || x.state === "soon")
+        .sort((a, b) => (a.i.expiration_date || "").localeCompare(b.i.expiration_date || ""));
+      if (soonItems.length > 0) {
+        const list = h("div", { class: "stack" });
+        for (const { i } of soonItems.slice(0, 20)) {
+          list.appendChild(renderInventoryItem(i, { showAppliance: true }));
+        }
+        main.appendChild(h("section", { class: "card stack", "aria-labelledby": "soon-h" }, [
+          h("h2", { id: "soon-h", style: "margin-top:0", text: "Expiring or expired" }),
+          list,
+        ]));
+      }
+
+      // Appliance summaries
+      const grid = h("section", { class: "dash-grid", "aria-label": "Appliances" });
+      for (const a of state.appliances) {
+        const items = state.items.filter(i => i.appliance_id === a.id);
+        const card = h("button", {
+          class: "card stack",
+          style: "text-align:left;cursor:pointer;",
+          onClick: () => { state.activeApplianceId = a.id; state.view = "appliance"; render(); },
+        }, [
+          h("div", { class: "row" }, [
+            h("strong", { text: a.name }),
+            h("span", { class: "pill", text: a.kind }),
+          ]),
+          h("div", { class: "muted", text: items.length + " item" + (items.length === 1 ? "" : "s") }),
+          a.location ? h("div", { class: "muted", text: a.location }) : null,
+        ]);
+        grid.appendChild(card);
+      }
+      main.appendChild(grid);
+
+      return main;
+    }
+
+    function statCard(label, value, kind = "") {
+      return h("div", { class: "card dash-stat " + kind }, [
+        h("div", { class: "muted", text: label }),
+        h("div", { class: "big", text: String(value) }),
+      ]);
+    }
+
+    function computeTotals() {
+      let expired = 0, soon = 0;
+      for (const i of state.items) {
+        const s = expirationState(i.expiration_date);
+        if (s === "expired") expired++;
+        else if (s === "soon") soon++;
+      }
+      return { expired, soon };
+    }
+
+    // ---------- appliances ----------
+
+    function renderAppliances() {
+      const main = h("main", { class: "app" });
+
+      const header = h("div", { class: "row", style: "justify-content:space-between;margin-bottom:1rem" }, [
+        h("h2", { style: "margin:0", text: "Appliances" }),
+        h("button", { class: "primary", onClick: () => openApplianceDialog(), text: "+ Add appliance" }),
+      ]);
+      main.appendChild(header);
+
+      if (state.appliances.length === 0) {
+        main.appendChild(emptyState(
+          "No appliances yet",
+          "Add your first fridge, freezer, or storage area.",
+          () => openApplianceDialog(),
+          "Add an appliance",
+        ));
+        return main;
+      }
+
+      const list = h("div", { class: "stack" });
+      for (const a of state.appliances) {
+        const itemCount = state.items.filter(i => i.appliance_id === a.id).length;
+        list.appendChild(h("div", { class: "card row", style: "justify-content:space-between;flex-wrap:wrap;gap:0.75rem" }, [
+          h("div", {}, [
+            h("div", { class: "row" }, [
+              h("strong", { text: a.name }),
+              h("span", { class: "pill", text: a.kind }),
+            ]),
+            a.location ? h("div", { class: "muted", text: a.location }) : null,
+            h("div", { class: "muted", text: itemCount + " item" + (itemCount === 1 ? "" : "s") }),
+          ]),
+          h("div", { class: "row" }, [
+            h("button", { onClick: () => { state.activeApplianceId = a.id; state.view = "appliance"; render(); }, text: "Open" }),
+            h("button", { onClick: () => openApplianceDialog(a), text: "Edit" }),
+            h("button", { class: "danger", onClick: () => deleteApplianceFlow(a), text: "Delete" }),
+          ]),
+        ]));
+      }
+      main.appendChild(list);
+      return main;
+    }
+
+    function openApplianceDialog(existing) {
+      const isEdit = !!existing;
+      const data = {
+        name: existing?.name || "",
+        kind: existing?.kind || "fridge",
+        location: existing?.location || "",
+        description: existing?.description || "",
+      };
+      const err = h("div", { role: "alert", class: "muted" });
+      openDialog({
+        title: isEdit ? "Edit appliance" : "Add appliance",
+        body: h("form", {
+          id: "appliance-form",
+          onSubmit: async (e) => {
+            e.preventDefault();
+            err.textContent = "";
+            if (!data.name.trim()) { err.textContent = "Name is required."; return; }
+            await withBusy(async () => {
+              try {
+                if (isEdit) {
+                  await api("/api/appliances/" + encodeURIComponent(existing.id), {
+                    method: "PATCH",
+                    body: {
+                      name: data.name,
+                      kind: data.kind,
+                      location: data.location,
+                      description: data.description,
+                    },
+                  });
+                } else {
+                  await api("/api/appliances", {
+                    method: "POST",
+                    body: {
+                      name: data.name,
+                      kind: data.kind,
+                      location: data.location || null,
+                      description: data.description || null,
+                    },
+                  });
+                }
+                await reloadInventory();
+                toast(isEdit ? "Appliance updated." : "Appliance added.", "success");
+                closeDialog();
+                render();
+              } catch (e2) {
+                err.textContent = e2.message;
+              }
+            });
+          },
+        }, [
+          h("label", {}, ["Name",
+            h("input", { type: "text", required: true, maxlength: "200", value: data.name,
+              onInput: (e) => { data.name = e.target.value; } }),
+          ]),
+          h("label", {}, ["Type",
+            selectEl([
+              ["fridge", "Fridge"],
+              ["freezer", "Freezer"],
+              ["other", "Other"],
+            ], data.kind, (v) => { data.kind = v; }),
+          ]),
+          h("label", {}, ["Location (optional)",
+            h("input", { type: "text", value: data.location, maxlength: "200",
+              onInput: (e) => { data.location = e.target.value; } }),
+          ]),
+          h("label", {}, ["Description (optional)",
+            h("textarea", { onInput: (e) => { data.description = e.target.value; }, text: data.description }),
+          ]),
+          err,
+        ]),
+        actions: [
+          { label: "Cancel", onClick: closeDialog },
+          { label: isEdit ? "Save" : "Add", primary: true, submit: "appliance-form" },
+        ],
+      });
+    }
+
+    async function deleteApplianceFlow(appliance) {
+      const items = state.items.filter(i => i.appliance_id === appliance.id);
+      const groups = state.groups.filter(g => g.appliance_id === appliance.id);
+      const totalChildren = items.length + groups.length;
+      if (totalChildren === 0) {
+        if (!confirm(`Delete "${appliance.name}"? This cannot be undone.`)) return;
+        await withBusy(async () => {
+          await api("/api/appliances/" + encodeURIComponent(appliance.id), { method: "DELETE" });
+          await reloadInventory();
+          toast("Appliance deleted.", "success");
+          render();
+        });
+        return;
+      }
+      // Non-empty: let the user choose a strategy.
+      let strategy = "move";
+      let moveTo = state.appliances.find(a => a.id !== appliance.id)?.id || "";
+      const err = h("div", { class: "muted", role: "alert" });
+      const moveSelect = selectEl(
+        state.appliances.filter(a => a.id !== appliance.id).map(a => [a.id, a.name]),
+        moveTo,
+        (v) => { moveTo = v; },
+      );
+      openDialog({
+        title: `Delete "${appliance.name}"`,
+        body: h("div", { class: "stack" }, [
+          h("p", { text: `This appliance holds ${items.length} item(s) and ${groups.length} group(s). Choose what happens to them:` }),
+          h("fieldset", { style: "border:none;padding:0" }, [
+            radioEl("del-strat", "move", strategy === "move", "Move contents to another appliance", (v) => { strategy = v; }),
+            moveSelect,
+            radioEl("del-strat", "cascade", strategy === "cascade", "Delete contents permanently", (v) => { strategy = v; }),
+          ]),
+          err,
+        ]),
+        actions: [
+          { label: "Cancel", onClick: closeDialog },
+          { label: "Delete appliance", primary: true, danger: true, onClick: async () => {
+              err.textContent = "";
+              if (strategy === "move") {
+                if (!moveTo) { err.textContent = "Pick a destination appliance."; return; }
+              }
+              await withBusy(async () => {
+                try {
+                  let url = "/api/appliances/" + encodeURIComponent(appliance.id) + "?strategy=" + strategy;
+                  if (strategy === "move") url += "&move_to=" + encodeURIComponent(moveTo);
+                  await api(url, { method: "DELETE" });
+                  await reloadInventory();
+                  toast("Appliance deleted.", "success");
+                  closeDialog();
+                  render();
+                } catch (e2) {
+                  err.textContent = e2.message;
+                }
+              });
+            } },
+        ],
+      });
+    }
+
+    // ---------- appliance detail ----------
+
+    function renderApplianceDetail() {
+      const a = state.appliances.find(x => x.id === state.activeApplianceId);
+      const main = h("main", { class: "app" });
+      if (!a) {
+        main.appendChild(emptyState("Appliance not found", "It may have been deleted.",
+          () => { state.view = "appliances"; render(); }, "Back to appliances"));
+        return main;
+      }
+
+      main.appendChild(h("div", { class: "row", style: "justify-content:space-between;margin-bottom:1rem" }, [
+        h("div", {}, [
+          h("button", { class: "ghost", onClick: () => { state.view = "appliances"; render(); }, text: "← All appliances" }),
+          h("h2", { style: "margin:0.25rem 0 0", text: a.name }),
+          h("div", { class: "row muted" }, [
+            h("span", { class: "pill", text: a.kind }),
+            a.location ? h("span", { text: a.location }) : null,
+          ]),
+        ]),
+        h("div", { class: "row" }, [
+          h("button", { class: "primary", onClick: () => openItemDialog(null, a.id), text: "+ Add item" }),
+          h("button", { onClick: () => openGroupDialog(null, a.id), text: "+ Add group" }),
+        ]),
+      ]));
+
+      const items = state.items.filter(i => i.appliance_id === a.id);
+      const groups = state.groups.filter(g => g.appliance_id === a.id);
+      if (items.length === 0 && groups.length === 0) {
+        main.appendChild(emptyState("Nothing here yet", "Add your first item or group.",
+          () => openItemDialog(null, a.id), "Add an item"));
+        return main;
+      }
+      main.appendChild(renderGroupedItems(items, groups, { showAppliance: false }));
+      return main;
+    }
+
+    // ---------- global inventory ----------
+
+    function renderGlobalInventory() {
+      const main = h("main", { class: "app" });
+      main.appendChild(h("h2", { text: "All Inventory" }));
+      main.appendChild(renderFilters());
+
+      const filtered = applyFilters(state.items);
+      if (filtered.length === 0) {
+        main.appendChild(emptyState("No matches", "Try clearing filters.", clearFilters, "Clear filters"));
+        return main;
+      }
+      // Group items by appliance for clarity.
+      const byAppliance = new Map();
+      for (const item of filtered) {
+        if (!byAppliance.has(item.appliance_id)) byAppliance.set(item.appliance_id, []);
+        byAppliance.get(item.appliance_id).push(item);
+      }
+      const stack = h("div", { class: "stack" });
+      for (const [applianceId, items] of byAppliance) {
+        const appliance = state.appliances.find(a => a.id === applianceId);
+        const applianceGroups = state.groups.filter(g => g.appliance_id === applianceId);
+        stack.appendChild(h("div", { class: "card stack" }, [
+          h("div", { class: "row", style: "justify-content:space-between" }, [
+            h("strong", { text: appliance ? appliance.name : "(unknown appliance)" }),
+            appliance ? h("span", { class: "pill", text: appliance.kind }) : null,
+          ]),
+          renderGroupedItems(items, applianceGroups, { showAppliance: false }),
+        ]));
+      }
+      main.appendChild(stack);
+      return main;
+    }
+
+    function renderFilters() {
+      const wrap = h("div", { class: "card stack" });
+      wrap.appendChild(h("div", { class: "filters" }, [
+        h("label", {}, ["Search",
+          h("input", { type: "search", placeholder: "Name or group", value: state.filters.q,
+            onInput: (e) => { state.filters.q = e.target.value; render(); } }),
+        ]),
+        h("label", {}, ["Appliance",
+          selectEl(
+            [["", "Any"]].concat(state.appliances.map(a => [a.id, a.name])),
+            state.filters.applianceId,
+            (v) => { state.filters.applianceId = v; render(); },
+          ),
+        ]),
+        h("label", {}, ["Tracking",
+          selectEl([
+            ["", "Any"],
+            ["individual", "Individual"],
+            ["pack", "Pack"],
+          ], state.filters.tracking, (v) => { state.filters.tracking = v; render(); }),
+        ]),
+        h("label", {}, ["Pack status",
+          selectEl([
+            ["", "Any"],
+            ["opened", "Opened"],
+            ["unopened", "Unopened"],
+          ], state.filters.packStatus, (v) => { state.filters.packStatus = v; render(); }),
+        ]),
+        h("label", {}, ["Expiration",
+          selectEl([
+            ["", "Any"],
+            ["expired", "Expired"],
+            ["soon", "Expiring ≤7 days"],
+            ["ok", "Fine"],
+            ["none", "No date"],
+          ], state.filters.expiration, (v) => { state.filters.expiration = v; render(); }),
+        ]),
+        h("label", {}, ["Sort",
+          selectEl([
+            ["name", "Name"],
+            ["expiration", "Expiration"],
+            ["quantity", "Quantity"],
+            ["appliance", "Appliance"],
+          ], state.sort, (v) => { state.sort = v; render(); }),
+        ]),
+      ]));
+      if (Object.values(state.filters).some(Boolean)) {
+        wrap.appendChild(h("div", { class: "row", style: "justify-content:flex-end" }, [
+          h("button", { class: "ghost", onClick: clearFilters, text: "Clear filters" }),
+        ]));
+      }
+      return wrap;
+    }
+
+    function clearFilters() {
+      state.filters = { q: "", applianceId: "", category: "", tracking: "", packStatus: "", expiration: "" };
+      render();
+    }
+
+    function applyFilters(items) {
+      const f = state.filters;
+      const q = (f.q || "").trim().toLowerCase();
+      let out = items.filter(i => {
+        if (f.applianceId && i.appliance_id !== f.applianceId) return false;
+        if (f.tracking && i.tracking !== f.tracking) return false;
+        if (f.packStatus) {
+          if (i.tracking !== "pack") return false;
+          if (i.pack_status !== f.packStatus) return false;
+        }
+        if (f.expiration) {
+          if (expirationState(i.expiration_date) !== f.expiration) return false;
+        }
+        if (q) {
+          const groupName = i.group_id ? (state.groups.find(g => g.id === i.group_id)?.name || "") : "";
+          const hay = (i.name + " " + groupName).toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      out.sort(compareItems);
+      return out;
+    }
+
+    function compareItems(a, b) {
+      switch (state.sort) {
+        case "expiration":
+          return (a.expiration_date || "~").localeCompare(b.expiration_date || "~");
+        case "quantity": {
+          const qa = a.tracking === "individual" ? (a.quantity || 0) : (a.pack_count || 0);
+          const qb = b.tracking === "individual" ? (b.quantity || 0) : (b.pack_count || 0);
+          return qb - qa;
+        }
+        case "appliance": {
+          const an = state.appliances.find(x => x.id === a.appliance_id)?.name || "";
+          const bn = state.appliances.find(x => x.id === b.appliance_id)?.name || "";
+          return an.localeCompare(bn) || a.name.localeCompare(b.name);
+        }
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    }
+
+    // ---------- items rendering ----------
+
+    function renderGroupedItems(items, groups, opts) {
+      const container = h("div", { class: "stack" });
+      // Grouped items first (one <details> per group), then ungrouped flat.
+      const groupMap = new Map(groups.map(g => [g.id, g]));
+      const byGroup = new Map();
+      const ungrouped = [];
+      for (const item of items) {
+        if (item.group_id && groupMap.has(item.group_id)) {
+          if (!byGroup.has(item.group_id)) byGroup.set(item.group_id, []);
+          byGroup.get(item.group_id).push(item);
+        } else {
+          ungrouped.push(item);
+        }
+      }
+      // Even empty groups are displayed so the user can see them.
+      for (const g of groups) {
+        if (!byGroup.has(g.id)) byGroup.set(g.id, []);
+      }
+      for (const [gid, groupItems] of byGroup) {
+        const g = groupMap.get(gid);
+        const summary = h("summary", {}, [
+          h("strong", { text: g.name }),
+          h("span", { class: "pill", text: groupItems.length + " variant" + (groupItems.length === 1 ? "" : "s") }),
+          h("div", { class: "row", style: "margin-left:auto" }, [
+            h("button", { class: "ghost", onClick: (e) => { e.preventDefault(); e.stopPropagation(); openItemDialog(null, g.appliance_id, g.id); }, text: "+ Variant" }),
+            h("button", { class: "ghost", onClick: (e) => { e.preventDefault(); e.stopPropagation(); openGroupDialog(g); }, text: "Edit" }),
+            h("button", { class: "ghost danger", onClick: (e) => { e.preventDefault(); e.stopPropagation(); deleteGroupFlow(g); }, text: "Delete" }),
+          ]),
+        ]);
+        const details = h("details", { class: "inv-group", open: true }, [summary]);
+        if (groupItems.length === 0) {
+          details.appendChild(h("div", { class: "inv-item" }, [
+            h("div", { class: "muted", text: "No variants yet." }),
+          ]));
+        } else {
+          groupItems.sort(compareItems);
+          for (const item of groupItems) {
+            details.appendChild(renderInventoryItem(item, opts));
+          }
+        }
+        container.appendChild(details);
+      }
+      if (ungrouped.length > 0) {
+        ungrouped.sort(compareItems);
+        const flat = h("div", { class: "inv-group" }, [
+          h("summary", {
+            style: "cursor:default;padding:0.75rem 1rem;background:var(--surface-2);display:flex;align-items:center;gap:0.5rem",
+          }, [h("strong", { text: "Ungrouped" })]),
+        ]);
+        // Not a details — just a visual list. Use a wrapper <div> instead.
+        const wrap = h("div", { class: "inv-group" }, [
+          h("div", { style: "padding:0.75rem 1rem;background:var(--surface-2);font-weight:600" }, [
+            h("span", { text: "Ungrouped" }),
+          ]),
+        ]);
+        for (const item of ungrouped) wrap.appendChild(renderInventoryItem(item, opts));
+        container.appendChild(wrap);
+      }
+      return container;
+    }
+
+    function renderInventoryItem(item, opts = {}) {
+      const busy = state.busyItems.has(item.id);
+      const appliance = state.appliances.find(a => a.id === item.appliance_id);
+      const metaChildren = [];
+      if (opts.showAppliance && appliance) metaChildren.push(h("span", { class: "pill", text: appliance.name }));
+      if (item.tracking === "individual") {
+        metaChildren.push(h("span", { class: "pill", text: "individual" }));
+      } else {
+        metaChildren.push(h("span", { class: "pill accent", text: item.pack_status }));
+      }
+      if (item.category) metaChildren.push(h("span", { class: "pill", text: item.category }));
+      if (item.expiration_date) {
+        const st = expirationState(item.expiration_date);
+        const cls = st === "expired" ? "pill danger" : st === "soon" ? "pill warning" : "pill";
+        const label = st === "expired" ? "Expired " + formatDate(item.expiration_date)
+                     : st === "soon" ? "Expires " + formatDate(item.expiration_date)
+                     : "Exp " + formatDate(item.expiration_date);
+        metaChildren.push(h("span", { class: cls, text: label }));
+      }
+
+      // Quantity + controls
+      const minusLabel = item.tracking === "individual" ? "Decrease quantity" : "Decrease pack count";
+      const plusLabel  = item.tracking === "individual" ? "Increase quantity" : "Increase pack count";
+      const delta = item.tracking === "individual" ? defaultIndividualDelta(item.unit) : 1;
+      const valueDisplay = item.tracking === "individual"
+        ? formatNumber(item.quantity) + " " + (item.unit || "")
+        : item.pack_count + " " + (item.pack_label || "pack") + (item.pack_count === 1 ? "" : "s");
+
+      const minusBtn = h("button", {
+        class: "icon", "aria-label": minusLabel,
+        disabled: busy,
+        onClick: () => adjustItem(item, -delta),
+        text: "−",
+      });
+      const plusBtn = h("button", {
+        class: "icon primary", "aria-label": plusLabel,
+        disabled: busy,
+        onClick: () => adjustItem(item, delta),
+        text: "+",
+      });
+      const qty = h("div", { class: "qty-controls" }, [
+        minusBtn,
+        h("div", { class: "qty-value", "aria-live": "polite", text: valueDisplay }),
+        plusBtn,
+      ]);
+
+      // Pack-opening actions on eligible unopened variants with count > 0
+      const packActions = [];
+      if (item.tracking === "pack" && item.pack_status === "unopened" && item.pack_count > 0) {
+        packActions.push(h("button", {
+          disabled: busy,
+          onClick: () => packOpen(item, "one"),
+          text: "Mark ×1 Open",
+        }));
+        packActions.push(h("button", {
+          disabled: busy,
+          onClick: () => packOpen(item, "all"),
+          text: "Mark All Open",
+        }));
+      }
+
+      const actions = h("div", { class: "inv-actions" }, [
+        ...packActions,
+        h("button", { class: "ghost", "aria-label": "Edit " + item.name, onClick: () => openItemDialog(item), text: "Edit" }),
+        h("button", { class: "ghost danger", "aria-label": "Delete " + item.name, onClick: () => deleteItemFlow(item), text: "Delete" }),
+      ]);
+
+      return h("div", { class: "inv-item" }, [
+        h("div", {}, [
+          h("div", { class: "name", text: item.name }),
+          h("div", { class: "meta" }, metaChildren),
+          item.notes ? h("div", { class: "muted", style: "margin-top:0.25rem", text: item.notes }) : null,
+        ]),
+        h("div", { style: "display:grid;gap:0.5rem;justify-items:end" }, [qty, actions]),
+      ]);
+    }
+
+    function defaultIndividualDelta(unit) {
+      // Unit-aware default increments. The user may edit the quantity directly
+      // through the edit dialog for exact values.
+      const u = (unit || "").toLowerCase();
+      if (["g", "ml"].includes(u)) return 50;
+      if (["kg", "l"].includes(u)) return 0.1;
+      return 1;
+    }
+
+    function formatNumber(n) {
+      if (n == null) return "0";
+      const rounded = Math.round(n * 10000) / 10000;
+      return String(rounded);
+    }
+
+    async function adjustItem(item, delta) {
+      if (state.busyItems.has(item.id)) return;
+      // If this adjustment would bring the quantity to zero (or below for
+      // fractional units that over-shoot), remove the item instead of
+      // leaving a zero-quantity record cluttering the list.
+      const current = item.tracking === "individual" ? (item.quantity || 0) : (item.pack_count || 0);
+      if (delta < 0 && current + delta <= 0) {
+        state.busyItems.add(item.id);
+        await withBusy(async () => {
+          try {
+            await api(
+              "/api/appliances/" + encodeURIComponent(item.appliance_id) +
+              "/items/" + encodeURIComponent(item.id),
+              { method: "DELETE" },
+            );
+            await reloadInventory();
+            toast(`"${item.name}" removed.`, "success");
+          } catch (err) {
+            toast("Could not remove item: " + err.message, "error");
+          } finally {
+            state.busyItems.delete(item.id);
+            render();
+          }
+        });
+        return;
+      }
+      state.busyItems.add(item.id);
+      await withBusy(async () => {
+        try {
+          const updated = await api(
+            "/api/appliances/" + encodeURIComponent(item.appliance_id) +
+            "/items/" + encodeURIComponent(item.id) + "/adjust",
+            { method: "POST", body: { delta } },
+          );
+          const idx = state.items.findIndex(i => i.id === updated.id);
+          if (idx >= 0) state.items[idx] = updated;
+          announce("Quantity updated.");
+        } catch (err) {
+          if (err.status === 400) toast(err.message, "error");
+          else toast("Could not update quantity: " + err.message, "error");
+        } finally {
+          state.busyItems.delete(item.id);
+          render();
+        }
+      });
+    }
+
+    async function packOpen(item, mode) {
+      if (state.busyItems.has(item.id)) return;
+      state.busyItems.add(item.id);
+      await withBusy(async () => {
+        try {
+          const path = mode === "one" ? "open-one" : "open-all";
+          const result = await api(
+            "/api/appliances/" + encodeURIComponent(item.appliance_id) +
+            "/items/" + encodeURIComponent(item.id) + "/" + path,
+            { method: "POST" },
+          );
+          // Refresh the inventory so the opened variant appears in the group.
+          await reloadInventory();
+          toast(mode === "one" ? "Opened 1 pack." : "Opened all packs.", "success");
+          render();
+        } catch (err) {
+          toast(err.message, "error");
+        } finally {
+          state.busyItems.delete(item.id);
+          render();
+        }
+      });
+    }
+
+    async function deleteItemFlow(item) {
+      if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+      await withBusy(async () => {
+        try {
+          await api(
+            "/api/appliances/" + encodeURIComponent(item.appliance_id) +
+            "/items/" + encodeURIComponent(item.id),
+            { method: "DELETE" },
+          );
+          await reloadInventory();
+          toast("Item deleted.", "success");
+          render();
+        } catch (err) {
+          toast(err.message, "error");
+        }
+      });
+    }
+
+    // ---------- item dialog ----------
+
+    function openItemDialog(existing, applianceId, groupId) {
+      const isEdit = !!existing;
+      const data = {
+        name: existing?.name || "",
+        appliance_id: existing?.appliance_id || applianceId || state.appliances[0]?.id || "",
+        group_id: existing?.group_id || groupId || "",
+        tracking: existing?.tracking || "individual",
+        quantity: existing?.tracking === "individual" ? existing.quantity : 1,
+        unit: existing?.tracking === "individual" ? existing.unit : "",
+        pack_count: existing?.tracking === "pack" ? existing.pack_count : 1,
+        pack_label: existing?.tracking === "pack" ? existing.pack_label : "bag",
+        pack_status: existing?.tracking === "pack" ? existing.pack_status : "unopened",
+        expiration_date: existing?.expiration_date || "",
+        category: existing?.category || "",
+        notes: existing?.notes || "",
+      };
+      const err = h("div", { class: "muted", role: "alert" });
+
+      // Which groups are valid for the chosen appliance?
+      function groupsForAppliance() {
+        return [["", "— None —"]].concat(
+          state.groups.filter(g => g.appliance_id === data.appliance_id).map(g => [g.id, g.name]),
+        );
+      }
+
+      const trackingFields = h("div");
+      function rebuildTrackingFields() {
+        trackingFields.textContent = "";
+        if (data.tracking === "individual") {
+          trackingFields.appendChild(h("div", { class: "row" }, [
+            h("label", { style: "flex:2" }, ["Quantity",
+              h("input", { type: "number", step: "0.0001", min: "0", value: String(data.quantity),
+                onInput: (e) => { data.quantity = parseFloat(e.target.value) || 0; } }),
+            ]),
+            h("label", { style: "flex:1" }, ["Unit",
+              h("input", { type: "text", required: true, placeholder: "g, kg, ml, L, pcs…", value: data.unit,
+                onInput: (e) => { data.unit = e.target.value; } }),
+            ]),
+          ]));
+        } else {
+          trackingFields.appendChild(h("div", { class: "row" }, [
+            h("label", { style: "flex:1" }, ["Pack count",
+              h("input", { type: "number", step: "1", min: "0", value: String(data.pack_count),
+                onInput: (e) => { data.pack_count = Math.max(0, parseInt(e.target.value || "0", 10)); } }),
+            ]),
+            h("label", { style: "flex:1" }, ["Pack label",
+              h("input", { type: "text", required: true, placeholder: "bag, box, tub…", value: data.pack_label,
+                onInput: (e) => { data.pack_label = e.target.value; } }),
+            ]),
+            h("label", { style: "flex:1" }, ["Status",
+              selectEl([["unopened", "Unopened"], ["opened", "Opened"]],
+                data.pack_status, (v) => { data.pack_status = v; }),
+            ]),
+          ]));
+        }
+      }
+      rebuildTrackingFields();
+
+      let groupSelect = selectEl(groupsForAppliance(), data.group_id, (v) => { data.group_id = v; });
+
+      openDialog({
+        title: isEdit ? "Edit item" : "Add item",
+        body: h("form", {
+          id: "item-form",
+          onSubmit: async (e) => {
+            e.preventDefault();
+            err.textContent = "";
+            if (!data.name.trim()) { err.textContent = "Name is required."; return; }
+            if (!data.appliance_id) { err.textContent = "Pick an appliance."; return; }
+            await withBusy(async () => {
+              try {
+                if (isEdit) {
+                  // Edit API only allows metadata changes; status/quantity use dedicated endpoints.
+                  const patch = {
+                    name: data.name,
+                    group_id: data.group_id || null,
+                    category: data.category || null,
+                    expiration_date: data.expiration_date || null,
+                    notes: data.notes || null,
+                  };
+                  if (existing.tracking === "individual") patch.unit = data.unit;
+                  if (existing.tracking === "pack") patch.pack_label = data.pack_label;
+                  await api(
+                    "/api/appliances/" + encodeURIComponent(existing.appliance_id) +
+                    "/items/" + encodeURIComponent(existing.id),
+                    { method: "PATCH", body: patch },
+                  );
+                } else {
+                  const body = {
+                    name: data.name,
+                    group_id: data.group_id || null,
+                    category: data.category || null,
+                    expiration_date: data.expiration_date || null,
+                    notes: data.notes || null,
+                  };
+                  if (data.tracking === "individual") {
+                    Object.assign(body, { tracking: "individual", quantity: data.quantity, unit: data.unit });
+                  } else {
+                    Object.assign(body, {
+                      tracking: "pack",
+                      pack_count: data.pack_count,
+                      pack_label: data.pack_label,
+                      pack_status: data.pack_status,
+                    });
+                  }
+                  await api(
+                    "/api/appliances/" + encodeURIComponent(data.appliance_id) + "/items",
+                    { method: "POST", body },
+                  );
+                }
+                await reloadInventory();
+                toast(isEdit ? "Item updated." : "Item added.", "success");
+                closeDialog();
+                render();
+              } catch (e2) {
+                err.textContent = e2.message;
+              }
+            });
+          },
+        }, [
+          h("label", {}, ["Name",
+            h("input", { type: "text", required: true, maxlength: "200", value: data.name,
+              onInput: (e) => { data.name = e.target.value; } }),
+          ]),
+          !isEdit ? h("label", {}, ["Appliance",
+            selectEl(state.appliances.map(a => [a.id, a.name]), data.appliance_id, (v) => {
+              data.appliance_id = v;
+              // Rebuild group dropdown for the new appliance.
+              const newSelect = selectEl(groupsForAppliance(), "", (nv) => { data.group_id = nv; });
+              groupSelect.replaceWith(newSelect);
+              groupSelect = newSelect;
+              data.group_id = "";
+            }),
+          ]) : null,
+          h("label", {}, ["Group (optional)", groupSelect]),
+          !isEdit ? h("label", {}, ["Tracking mode",
+            selectEl([
+              ["individual", "Individual quantity (e.g. 500 g, 1.5 L)"],
+              ["pack", "Pack-based (e.g. 4 bags)"],
+            ], data.tracking, (v) => { data.tracking = v; rebuildTrackingFields(); }),
+          ]) : null,
+          trackingFields,
+          h("label", {}, ["Category (optional)",
+            h("input", { type: "text", value: data.category, maxlength: "100",
+              onInput: (e) => { data.category = e.target.value; } }),
+          ]),
+          h("label", {}, ["Expiration (optional)",
+            h("input", { type: "date", value: data.expiration_date,
+              onInput: (e) => { data.expiration_date = e.target.value; } }),
+          ]),
+          h("label", {}, ["Notes (optional)",
+            h("textarea", { onInput: (e) => { data.notes = e.target.value; }, text: data.notes }),
+          ]),
+          err,
+        ]),
+        actions: [
+          { label: "Cancel", onClick: closeDialog },
+          { label: isEdit ? "Save" : "Add", primary: true, submit: "item-form" },
+        ],
+      });
+    }
+
+    // ---------- groups ----------
+
+    function openGroupDialog(existing, applianceId) {
+      const isEdit = !!existing;
+      const data = {
+        name: existing?.name || "",
+        appliance_id: existing?.appliance_id || applianceId || state.appliances[0]?.id || "",
+        description: existing?.description || "",
+      };
+      const err = h("div", { class: "muted", role: "alert" });
+      openDialog({
+        title: isEdit ? "Edit group" : "Add group",
+        body: h("form", {
+          id: "group-form",
+          onSubmit: async (e) => {
+            e.preventDefault();
+            err.textContent = "";
+            if (!data.name.trim()) { err.textContent = "Name is required."; return; }
+            if (!data.appliance_id) { err.textContent = "Pick an appliance."; return; }
+            await withBusy(async () => {
+              try {
+                if (isEdit) {
+                  await api("/api/groups/" + encodeURIComponent(existing.id), {
+                    method: "PATCH",
+                    body: { name: data.name, description: data.description, appliance_id: data.appliance_id },
+                  });
+                } else {
+                  await api("/api/groups", {
+                    method: "POST",
+                    body: { name: data.name, appliance_id: data.appliance_id, description: data.description || null },
+                  });
+                }
+                await reloadInventory();
+                toast(isEdit ? "Group updated." : "Group added.", "success");
+                closeDialog();
+                render();
+              } catch (e2) {
+                err.textContent = e2.message;
+              }
+            });
+          },
+        }, [
+          h("label", {}, ["Name",
+            h("input", { type: "text", required: true, maxlength: "200", value: data.name,
+              onInput: (e) => { data.name = e.target.value; } }),
+          ]),
+          !isEdit ? h("label", {}, ["Appliance",
+            selectEl(state.appliances.map(a => [a.id, a.name]), data.appliance_id,
+              (v) => { data.appliance_id = v; }),
+          ]) : null,
+          h("label", {}, ["Description (optional)",
+            h("textarea", { onInput: (e) => { data.description = e.target.value; }, text: data.description }),
+          ]),
+          err,
+        ]),
+        actions: [
+          { label: "Cancel", onClick: closeDialog },
+          { label: isEdit ? "Save" : "Add", primary: true, submit: "group-form" },
+        ],
+      });
+    }
+
+    async function deleteGroupFlow(group) {
+      const children = state.items.filter(i => i.group_id === group.id);
+      if (children.length === 0) {
+        if (!confirm(`Delete group "${group.name}"?`)) return;
+        await withBusy(async () => {
+          await api("/api/groups/" + encodeURIComponent(group.id), { method: "DELETE" });
+          await reloadInventory();
+          toast("Group deleted.", "success");
+          render();
+        });
+        return;
+      }
+      let strategy = "detach";
+      let moveToGroup = state.groups.find(g => g.id !== group.id && g.appliance_id === group.appliance_id)?.id || "";
+      const err = h("div", { class: "muted", role: "alert" });
+      const moveSelect = selectEl(
+        state.groups.filter(g => g.id !== group.id && g.appliance_id === group.appliance_id).map(g => [g.id, g.name]),
+        moveToGroup,
+        (v) => { moveToGroup = v; },
+      );
+      openDialog({
+        title: `Delete group "${group.name}"`,
+        body: h("div", { class: "stack" }, [
+          h("p", { text: `This group has ${children.length} variant(s). Choose what happens to them:` }),
+          h("fieldset", { style: "border:none;padding:0" }, [
+            radioEl("delg-strat", "detach", strategy === "detach", "Keep variants, remove from group", (v) => { strategy = v; }),
+            radioEl("delg-strat", "move", strategy === "move", "Move variants into another group in the same appliance", (v) => { strategy = v; }),
+            moveSelect,
+            radioEl("delg-strat", "cascade", strategy === "cascade", "Delete variants permanently", (v) => { strategy = v; }),
+          ]),
+          err,
+        ]),
+        actions: [
+          { label: "Cancel", onClick: closeDialog },
+          { label: "Delete group", primary: true, danger: true, onClick: async () => {
+              err.textContent = "";
+              if (strategy === "move" && !moveToGroup) { err.textContent = "Pick a destination group."; return; }
+              await withBusy(async () => {
+                try {
+                  let url = "/api/groups/" + encodeURIComponent(group.id) + "?strategy=" + strategy;
+                  if (strategy === "move") url += "&move_to_group=" + encodeURIComponent(moveToGroup);
+                  await api(url, { method: "DELETE" });
+                  await reloadInventory();
+                  toast("Group deleted.", "success");
+                  closeDialog();
+                  render();
+                } catch (e2) {
+                  err.textContent = e2.message;
+                }
+              });
+            } },
+        ],
+      });
+    }
+
+    // ---------- settings ----------
+
+    function renderSettings() {
+      const main = h("main", { class: "app" });
+      main.appendChild(h("h2", { text: "Settings" }));
+
+      let current = "", next = "", confirm = "";
+      const err = h("div", { role: "alert", class: "muted" });
+
+      main.appendChild(h("div", { class: "card stack" }, [
+        h("h3", { style: "margin-top:0", text: "Change PIN" }),
+        h("p", { class: "muted", text: "You'll be returned to the lock screen after changing your PIN." }),
+        h("form", {
+          onSubmit: async (e) => {
+            e.preventDefault();
+            err.textContent = "";
+            if (!/^\d{4,12}$/.test(next)) { err.textContent = "New PIN must be 4–12 digits."; return; }
+            if (next !== confirm) { err.textContent = "New PINs don't match."; return; }
+            await withBusy(async () => {
+              try {
+                await changePin(current, next);
+                toast("PIN changed. Please unlock with your new PIN.", "success");
+              } catch (e2) {
+                if (e2.status === 401) err.textContent = "Current PIN is incorrect.";
+                else err.textContent = e2.message;
+              }
+            });
+          },
+        }, [
+          h("label", {}, ["Current PIN",
+            h("input", { type: "password", inputmode: "numeric", maxlength: "12", required: true, autocomplete: "current-password",
+              onInput: (e) => { current = e.target.value; } }),
+          ]),
+          h("label", {}, ["New PIN",
+            h("input", { type: "password", inputmode: "numeric", maxlength: "12", required: true, autocomplete: "new-password",
+              onInput: (e) => { next = e.target.value; } }),
+          ]),
+          h("label", {}, ["Confirm new PIN",
+            h("input", { type: "password", inputmode: "numeric", maxlength: "12", required: true, autocomplete: "new-password",
+              onInput: (e) => { confirm = e.target.value; } }),
+          ]),
+          err,
+          h("div", { class: "row", style: "justify-content:flex-end;margin-top:0.75rem" }, [
+            h("button", { type: "submit", class: "primary", text: "Change PIN" }),
+          ]),
+        ]),
+      ]));
+
+      main.appendChild(h("div", { class: "card stack" }, [
+        h("h3", { style: "margin-top:0", text: "About" }),
+        h("p", { class: "muted", text: "Chillventory stores all data on your own backend. Sessions expire after inactivity." }),
+        h("p", { class: "muted", text: "To back up: stop the server and copy data/accounts.json plus the data/accounts/ folder. Each account has its own inventory file under data/accounts/<account-id>/inventory.json." }),
+      ]));
+
+      return main;
+    }
+
+    // ---------- dialog + helpers ----------
+
+    let dialogEl = null;
+    function openDialog({ title, body, actions }) {
+      closeDialog();
+      const titleId = "dlg-" + Math.random().toString(36).slice(2, 8);
+      const content = h("div", { class: "dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": titleId }, [
+        h("h2", { id: titleId, style: "margin-top:0", text: title }),
+        body,
+        h("div", { class: "row", style: "justify-content:flex-end;margin-top:1rem;gap:0.5rem" }, actions.map(a =>
+          h("button", {
+            class: (a.primary ? "primary" : "") + (a.danger ? " danger" : ""),
+            type: a.submit ? "submit" : "button",
+            form: a.submit || null,
+            onClick: a.onClick || null,
+            text: a.label,
+          }),
+        )),
+      ]);
+      dialogEl = h("div", { class: "dialog-backdrop", onClick: (e) => { if (e.target === dialogEl) closeDialog(); } }, [content]);
+      document.body.appendChild(dialogEl);
+      document.addEventListener("keydown", escCloser);
+      // Focus the first field.
+      queueMicrotask(() => {
+        const first = content.querySelector("input, select, textarea, button");
+        if (first) first.focus();
+      });
+    }
+    function closeDialog() {
+      if (dialogEl) {
+        dialogEl.remove();
+        dialogEl = null;
+        document.removeEventListener("keydown", escCloser);
+      }
+    }
+    function escCloser(e) {
+      if (e.key === "Escape") closeDialog();
+    }
+
+    function selectEl(options, value, onChange) {
+      const sel = h("select", { onChange: (e) => onChange(e.target.value) });
+      for (const [val, label] of options) {
+        const opt = h("option", { value: val, text: label });
+        if (val === value) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      return sel;
+    }
+
+    function radioEl(name, value, checked, label, onChange) {
+      const id = "r_" + Math.random().toString(36).slice(2, 8);
+      return h("label", { for: id, style: "display:flex;gap:0.5rem;align-items:center;margin-top:0.3rem" }, [
+        h("input", {
+          type: "radio", name, value, id,
+          onChange: (e) => { if (e.target.checked) onChange(value); },
+          checked: checked ? "checked" : null,
+        }),
+        h("span", { text: label }),
+      ]);
+    }
+
+    function emptyState(title, body, action, actionLabel) {
+      return h("div", { class: "card empty" }, [
+        h("h3", { style: "margin-top:0", text: title }),
+        h("p", { text: body }),
+        action ? h("button", { class: "primary", onClick: action, text: actionLabel }) : null,
+      ]);
+    }
+
+    // ---------- boot ----------
+
+    (function initTheme() {
+      try {
+        const stored = localStorage.getItem("chillventory_theme");
+        if (stored && stored !== "auto") document.documentElement.dataset.theme = stored;
+      } catch (_) {}
+    })();
+
+    async function boot() {
+      render();
+      await checkAuth();
+      render();
+    }
+    boot();
+
+    // Register the service worker (PWA shell only; private data is never cached).
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+      });
+    }
+
+    // Lock on tab hidden for a long time (defence in depth; server also expires sessions).
+    let hiddenAt = null;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+      } else if (hiddenAt && Date.now() - hiddenAt > 10 * 60 * 1000) {
+        hiddenAt = null;
+        if (state.authenticated) lock();
+      }
+    });
+  </script>
+</body>
+</html>

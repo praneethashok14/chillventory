@@ -22,10 +22,15 @@ id = "7a1c5aa51a9043aab3d4d0fe33f4de5a"
 
 # Static app shell. `npm run prepare` copies the frontend from the repo root
 # into ./public, which Wrangler then serves at /, /manifest.webmanifest, etc.
+#
+# `run_worker_first = true` is critical: without it, the assets handler
+# intercepts every request before the Worker runs, which means /api/*
+# calls return the SPA shell as HTML and the backend is unreachable.
 [assets]
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+run_worker_first = true
 
 # Optional: override the Argon2 cost + session TTL at build time if you want.
 [vars]

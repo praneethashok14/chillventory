@@ -1,0 +1,6 @@
+/target
+/data/*.json
+/data/accounts/
+!/data/.gitkeep
+Cargo.lock
+.DS_Store

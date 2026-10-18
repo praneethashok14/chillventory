@@ -1,0 +1,33 @@
+name = "chillventory"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 database: holds `accounts` and `inventories` (one JSON blob per account).
+# Create it once with:
+#   wrangler d1 create chillventory
+# then paste the returned database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "chillventory"
+database_id = "REPLACE_WITH_d1_create_output"
+
+# KV namespace for server-side sessions.
+# Create it once with:
+#   wrangler kv:namespace create SESSIONS
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "REPLACE_WITH_kv_namespace_create_output"
+
+# Static app shell. `npm run prepare` copies the frontend from the repo root
+# into ./public, which Wrangler then serves at /, /manifest.webmanifest, etc.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# Optional: override the Argon2 cost + session TTL at build time if you want.
+[vars]
+SESSION_TTL_SECONDS = "3600"
+PBKDF2_ITERATIONS = "500000"

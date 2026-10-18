@@ -1,4 +1,4 @@
-# PIN Access and Security — Fridgeflow
+# PIN Access and Security — StockSpace
 
 Protect inventory data with a PIN verified by the Rust backend.
 

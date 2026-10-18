@@ -13,8 +13,8 @@ use time::OffsetDateTime;
 
 use crate::storage::{JsonStore, StorageError};
 
-pub const SESSION_COOKIE: &str = "fridgeflow_session";
-pub const CSRF_HEADER: &str = "x-fridgeflow-csrf";
+pub const SESSION_COOKIE: &str = "stockspace_session";
+pub const CSRF_HEADER: &str = "x-stockspace-csrf";
 pub const DEFAULT_SESSION_TTL: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

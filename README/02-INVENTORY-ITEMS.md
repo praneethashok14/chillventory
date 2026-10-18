@@ -1,4 +1,4 @@
-# Inventory Items — Fridgeflow
+# Inventory Items — StockSpace
 
 Users manually create, edit, and delete inventory records.
 

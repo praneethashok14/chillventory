@@ -17,7 +17,7 @@ interface Session {
   created_at: number;
 }
 
-type Kind = "fridge" | "freezer" | "other";
+type Kind = "fridge" | "freezer" | "shelf" | "other";
 type PackStatus = "opened" | "unopened";
 
 interface Appliance {
@@ -66,8 +66,8 @@ interface Inventory {
 
 const EMPTY_INVENTORY: Inventory = { appliances: [], groups: [], items: [] };
 
-const SESSION_COOKIE = "fridgeflow_session";
-const CSRF_HEADER = "x-fridgeflow-csrf";
+const SESSION_COOKIE = "stockspace_session";
+const CSRF_HEADER = "x-stockspace-csrf";
 
 // ---------- App ----------
 
@@ -453,8 +453,8 @@ app.post("/api/appliances", async (c) => {
   if (!validItemName(body.name)) {
     return jsonError(c, 400, "bad_request", "name is required");
   }
-  if (!body.kind || !["fridge", "freezer", "other"].includes(body.kind)) {
-    return jsonError(c, 400, "bad_request", "kind must be fridge, freezer, or other");
+  if (!body.kind || !["fridge", "freezer", "shelf", "other"].includes(body.kind)) {
+    return jsonError(c, 400, "bad_request", "kind must be fridge, freezer, shelf, or other");
   }
   const appliance: Appliance = {
     id: newId(),
@@ -511,8 +511,8 @@ app.patch("/api/appliances/:id", async (c) => {
         a.name = body.name.trim();
       }
       if (body.kind !== undefined) {
-        if (!["fridge", "freezer", "other"].includes(body.kind)) {
-          throw new HttpErr(400, "kind must be fridge, freezer, or other");
+        if (!["fridge", "freezer", "shelf", "other"].includes(body.kind)) {
+          throw new HttpErr(400, "kind must be fridge, freezer, shelf, or other");
         }
         a.kind = body.kind;
       }

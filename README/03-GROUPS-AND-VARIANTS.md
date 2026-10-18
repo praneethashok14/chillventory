@@ -1,4 +1,4 @@
-# Groups and Variants — Fridgeflow
+# Groups and Variants — StockSpace
 
 Implement parent groups that organize related inventory records.
 

@@ -1,4 +1,4 @@
-# Fridgeflow on Cloudflare Workers
+# StockSpace on Cloudflare Workers
 
 An optional TypeScript port of the backend that runs the whole app on Cloudflare's edge, using **D1** (SQLite) for durable storage and **KV** for session tokens. The original Rust server at the repo root still works for local development; this directory is independent.
 
@@ -12,7 +12,7 @@ Prereqs: Node 20+, a Cloudflare account.
 cd cloudflare
 npm install
 npx wrangler login                                    # browser OAuth, one time
-npx wrangler d1 create fridgeflow                   # prints a database_id
+npx wrangler d1 create fridgeflow                 # prints a database_id (named fridgeflow for history)
 npx wrangler kv:namespace create SESSIONS             # prints an id
 ```
 
@@ -32,7 +32,7 @@ npm run db:init           # runs schema.sql against the remote D1
 npm run deploy
 ```
 
-The `prepare-assets` step copies `index.html`, `manifest.webmanifest`, `service-worker.js`, and `icons/` from the repo root into `cloudflare/public/`, then `wrangler deploy` ships both the Worker and the static shell under one domain. The URL Wrangler prints at the end is where your app lives (something like `https://fridgeflow.<your-subdomain>.workers.dev`).
+The `prepare-assets` step copies `index.html`, `manifest.webmanifest`, `service-worker.js`, and `icons/` from the repo root into `cloudflare/public/`, then `wrangler deploy` ships both the Worker and the static shell under one domain. The URL Wrangler prints at the end is where your app lives (something like `https://stockspace.<your-subdomain>.workers.dev`).
 
 Open it in a browser, create your account, done.
 
@@ -66,7 +66,7 @@ TL;DR: your inventory, accounts, PINs, and photos **persist across every `wrangl
 
 ### What *can* destroy data (don't do these without a backup)
 
-- `wrangler d1 delete fridgeflow`
+- `wrangler d1 delete fridgeflow`  (the D1 database kept its original name)
 - `wrangler d1 execute --command "DROP TABLE ..."`
 - Destructive migrations in `schema.sql` (anything beyond `CREATE TABLE IF NOT EXISTS` or `CREATE INDEX IF NOT EXISTS` or additive `ALTER TABLE ... ADD COLUMN`)
 - Deleting the KV namespace (just logs everyone out — not real inventory loss)
@@ -87,12 +87,12 @@ TL;DR: your inventory, accounts, PINs, and photos **persist across every `wrangl
    npm run db:backup
    ```
 
-   Writes `backups/fridgeflow-YYYYMMDD-HHMMSS.sql`. The `backups/` directory is gitignored so your real data never ends up on GitHub. Keep a few of these around if you're about to do something you're unsure about.
+   Writes `backups/stockspace-YYYYMMDD-HHMMSS.sql`. The `backups/` directory is gitignored so your real data never ends up on GitHub. Keep a few of these around if you're about to do something you're unsure about.
 
 3. **Restore from a SQL dump** (recovers a specific snapshot into the live DB):
 
    ```sh
-   npx wrangler d1 execute fridgeflow --remote --file=backups/fridgeflow-20261018-165248.sql
+   npx wrangler d1 execute fridgeflow --remote --file=backups/stockspace-20261018-165248.sql
    ```
 
 ### Schema change rules

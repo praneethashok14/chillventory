@@ -1,4 +1,4 @@
-# Quantity Controls — Fridgeflow
+# Quantity Controls — StockSpace
 
 Every visible inventory record must have visible − and + buttons directly beside its displayed quantity or pack count. They must not depend on hovering.
 

@@ -1,6 +1,6 @@
 {
-  "name": "Fridgeflow",
-  "short_name": "Fridgeflow",
+  "name": "StockSpace",
+  "short_name": "StockSpace",
   "description": "PIN-protected inventory tracking for your fridges and freezers.",
   "start_url": "/",
   "scope": "/",

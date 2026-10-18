@@ -1,12 +1,15 @@
-name = "fridgeflow"
+name = "stockspace"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
-# D1 database: holds `accounts` and `inventories` (one JSON blob per account).
-# Create it once with:
-#   wrangler d1 create fridgeflow
-# then paste the returned database_id below.
+# D1 database: holds `accounts`, `inventories`, and `item_photos`.
+#
+# `database_name` deliberately stays "fridgeflow" even after the project
+# was renamed to StockSpace — the actual D1 database on Cloudflare is still
+# the one created back when the project was called fridgeflow (same
+# UUID, same rows). Renaming it would require creating a new D1 database
+# and migrating; the data lives safely under the current name.
 [[d1_databases]]
 binding = "DB"
 database_name = "fridgeflow"

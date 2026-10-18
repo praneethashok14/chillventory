@@ -1,4 +1,4 @@
-# UI and Accessibility — Fridgeflow
+# UI and Accessibility — StockSpace
 
 Build a clean, responsive interface for desktop, tablet, and mobile.
 

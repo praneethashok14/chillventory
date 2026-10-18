@@ -1,4 +1,4 @@
-# API and Testing — Fridgeflow
+# API and Testing — StockSpace
 
 ## REST API
 Implement consistent JSON responses and backend validation.

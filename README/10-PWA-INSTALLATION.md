@@ -1,6 +1,6 @@
-# Progressive Web App — Fridgeflow
+# Progressive Web App — StockSpace
 
-Make Fridgeflow an installable PWA while keeping the application frontend in one index.html.
+Make StockSpace an installable PWA while keeping the application frontend in one index.html.
 
 ## Required support files
 - manifest.webmanifest with name, short name, start URL, standalone display mode, theme colour, background colour, and icon declarations.

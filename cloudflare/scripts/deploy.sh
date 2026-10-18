@@ -15,7 +15,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$HERE"
 
-LOG="$(mktemp -t fridgeflow-deploy-XXXXXX.log)"
+LOG="$(mktemp -t stockspace-deploy-XXXXXX.log)"
 trap 'rm -f "$LOG"' EXIT
 
 npm run prepare-assets

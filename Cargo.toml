@@ -1,12 +1,12 @@
 [package]
-name = "fridgeflow"
+name = "stockspace"
 version = "0.1.0"
 edition = "2021"
 description = "PIN-protected PWA for tracking food inventory across fridges and freezers."
 license = "MIT"
 
 [[bin]]
-name = "fridgeflow"
+name = "stockspace"
 path = "src/main.rs"
 
 [dependencies]

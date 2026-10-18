@@ -1,4 +1,4 @@
-# Appliances — Fridgeflow
+# Appliances — StockSpace
 
 Implement management of multiple storage appliances.
 

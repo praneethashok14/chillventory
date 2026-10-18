@@ -1,4 +1,4 @@
--- Fridgeflow D1 schema. Idempotent; safe to re-run.
+-- StockSpace D1 schema. Idempotent; safe to re-run.
 --
 -- `accounts` holds the login identity for each user (name + salted PBKDF2
 -- PIN hash). `inventories` holds the appliance/group/item data as a single

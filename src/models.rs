@@ -6,6 +6,7 @@ use time::OffsetDateTime;
 pub enum ApplianceKind {
     Fridge,
     Freezer,
+    Shelf,
     Other,
 }
 

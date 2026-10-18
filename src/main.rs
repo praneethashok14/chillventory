@@ -4,20 +4,20 @@ use std::sync::Arc;
 
 use axum::Router;
 
-use fridgeflow::accounts::AccountsState;
-use fridgeflow::routes::{self, AppState};
-use fridgeflow::static_files;
+use stockspace::accounts::AccountsState;
+use stockspace::routes::{self, AppState};
+use stockspace::static_files;
 
 #[tokio::main]
 async fn main() {
     if let Err(e) = run().await {
-        eprintln!("fridgeflow: fatal error: {e}");
+        eprintln!("stockspace: fatal error: {e}");
         std::process::exit(1);
     }
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let data_dir = std::env::var("FRIDGEFLOW_DATA_DIR")
+    let data_dir = std::env::var("STOCKSPACE_DATA_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("data"));
     std::fs::create_dir_all(&data_dir)?;
@@ -29,11 +29,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let api = routes::router(state);
     let app: Router = static_files::attach(api);
 
-    let bind = std::env::var("FRIDGEFLOW_BIND").unwrap_or_else(|_| "127.0.0.1:8787".to_string());
+    let bind = std::env::var("STOCKSPACE_BIND").unwrap_or_else(|_| "127.0.0.1:8787".to_string());
     let addr: SocketAddr = bind.parse()?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let bound = listener.local_addr()?;
-    println!("fridgeflow listening on http://{bound}");
+    println!("stockspace listening on http://{bound}");
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),

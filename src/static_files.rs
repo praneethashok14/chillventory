@@ -22,7 +22,7 @@ pub fn attach(api: Router) -> Router {
 }
 
 fn asset_root() -> PathBuf {
-    std::env::var("FRIDGEFLOW_ASSET_DIR")
+    std::env::var("STOCKSPACE_ASSET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("."))
 }

@@ -90,7 +90,9 @@
       background: var(--surface);
       color: var(--text);
       padding: 0.5rem 0.9rem;
-      min-height: 40px;
+      min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
     button:hover:not(:disabled) { background: var(--surface-2); }
     button:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -99,21 +101,25 @@
     button.danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
     button.ghost { background: transparent; }
     button.icon {
-      min-width: 40px;
-      min-height: 40px;
+      min-width: 44px;
+      min-height: 44px;
       padding: 0;
       font-size: 1.2rem;
       line-height: 1;
     }
     input, select, textarea {
       font: inherit;
+      /* 16px minimum prevents iOS Safari auto-zoom on focus */
+      font-size: max(16px, 1rem);
       color: var(--text);
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 0.5rem 0.7rem;
-      min-height: 40px;
+      min-height: 44px;
       width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
     }
     textarea { min-height: 80px; resize: vertical; }
     label { display: block; margin-top: 0.75rem; font-weight: 600; }
@@ -143,16 +149,22 @@
       padding: 1rem;
       box-shadow: var(--shadow);
     }
+    html, body { overflow-x: hidden; }
     .layout {
       display: grid;
       grid-template-rows: auto 1fr;
       min-height: 100vh;
+      min-height: 100dvh; /* respects mobile browser UI chrome */
     }
     header.app {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      padding: 0.75rem 1rem;
+      padding:
+        max(0.75rem, env(safe-area-inset-top))
+        max(1rem, env(safe-area-inset-right))
+        0.75rem
+        max(1rem, env(safe-area-inset-left));
       border-bottom: 1px solid var(--border);
       background: var(--surface);
       position: sticky;
@@ -165,12 +177,18 @@
       display: flex;
       align-items: center;
       gap: 0.4rem;
+      min-width: 0;
+      flex-wrap: wrap;
     }
     nav.main {
       display: flex;
       gap: 0.25rem;
       flex-wrap: wrap;
       margin-left: auto;
+    }
+    nav.main button {
+      min-height: 44px;
+      padding: 0.4rem 0.75rem;
     }
     nav.main button[aria-current="page"] {
       background: var(--accent);
@@ -179,18 +197,26 @@
     }
     main.app {
       padding: 1rem;
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
       max-width: 1100px;
       width: 100%;
       margin: 0 auto;
     }
     .toasts {
       position: fixed;
-      inset: auto 1rem 1rem auto;
+      right: max(1rem, env(safe-area-inset-right));
+      bottom: max(1rem, env(safe-area-inset-bottom));
+      left: max(1rem, env(safe-area-inset-left));
       z-index: 100;
       display: grid;
       gap: 0.5rem;
       max-width: 420px;
+      margin-left: auto;
+      pointer-events: none;
     }
+    .toast { pointer-events: auto; }
     .toast {
       padding: 0.75rem 1rem;
       border-radius: var(--radius);
@@ -261,6 +287,11 @@
       border-top: 1px solid var(--border);
       align-items: center;
     }
+    .inv-right {
+      display: grid;
+      gap: 0.5rem;
+      justify-items: end;
+    }
     .inv-item .meta {
       display: flex;
       flex-wrap: wrap;
@@ -289,12 +320,12 @@
     .filters {
       display: grid;
       gap: 0.5rem;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       margin-bottom: 1rem;
     }
     .dash-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 0.75rem;
       margin-bottom: 1rem;
     }
@@ -329,11 +360,47 @@
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
-    @media (max-width: 540px) {
+    @media (max-width: 720px) {
       header.app { flex-wrap: wrap; }
-      nav.main { width: 100%; justify-content: space-around; margin-left: 0; }
-      .inv-item { grid-template-columns: 1fr; }
+      nav.main {
+        width: 100%;
+        margin-left: 0;
+        order: 3;
+        justify-content: flex-start;
+      }
+      nav.main button { flex: 1 1 auto; min-width: 0; }
+    }
+    @media (max-width: 540px) {
+      header.app { padding-top: max(0.5rem, env(safe-area-inset-top)); gap: 0.5rem; }
+      header.app h1 { font-size: 1rem; }
+      main.app { padding: 0.75rem; padding-left: max(0.75rem, env(safe-area-inset-left));
+                 padding-right: max(0.75rem, env(safe-area-inset-right));
+                 padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+      .card { padding: 0.75rem; }
+      .inv-item { grid-template-columns: 1fr; padding: 0.75rem; }
+      .inv-right { justify-items: start; width: 100%; }
       .inv-actions { justify-content: flex-start; }
+      .qty-controls { align-self: center; }
+      .inv-group summary { padding: 0.75rem; flex-wrap: wrap; }
+      .pin-input { font-size: 1.4rem; letter-spacing: 0.3rem; }
+      /* Dialog becomes a bottom sheet on narrow screens */
+      .dialog-backdrop { padding: 0; align-items: flex-end; }
+      .dialog {
+        max-width: 100%;
+        width: 100%;
+        max-height: 92vh;
+        max-height: 92dvh;
+        overflow-y: auto;
+        border-radius: 16px 16px 0 0;
+        padding: 1rem;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+      }
+    }
+    @media (max-width: 380px) {
+      .dash-grid { grid-template-columns: 1fr 1fr; }
+      .dash-stat .big { font-size: 1.4rem; }
+      .filters { grid-template-columns: 1fr 1fr; }
+      nav.main button { padding: 0.35rem 0.5rem; font-size: 0.9rem; }
     }
   </style>
 </head>
@@ -1467,7 +1534,7 @@
 
       return h("div", { class: "inv-item" }, [
         leftCol,
-        h("div", { style: "display:grid;gap:0.5rem;justify-items:end" }, [qty, actions]),
+        h("div", { class: "inv-right" }, [qty, actions]),
       ]);
     }
 

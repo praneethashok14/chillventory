@@ -366,6 +366,7 @@ async fn pack_open_conserves_total() {
         .unwrap();
     assert_eq!(one["unopened"]["pack_count"].as_u64().unwrap(), 3);
     assert_eq!(one["opened"]["pack_count"].as_u64().unwrap(), 1);
+    assert_eq!(one["source_deleted"], false);
 
     let all: Value = server
         .client
@@ -379,8 +380,48 @@ async fn pack_open_conserves_total() {
         .json()
         .await
         .unwrap();
-    assert_eq!(all["unopened"]["pack_count"].as_u64().unwrap(), 0);
+    // After Mark All Open, the now-empty unopened variant is auto-deleted:
+    // `source_deleted` is true and `unopened` is null.
+    assert_eq!(all["source_deleted"], true);
+    assert!(all["unopened"].is_null());
     assert_eq!(all["opened"]["pack_count"].as_u64().unwrap(), 4);
+
+    // Verify the unopened item is gone from inventory.
+    let items: Value = server
+        .client
+        .get(server.url("/api/items"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let item_ids: Vec<&str> = items["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["id"].as_str().unwrap())
+        .collect();
+    assert!(!item_ids.contains(&unopened_id.as_str()));
+
+    // Round-trip: Mark All Unopened on the opened variant should move all 4
+    // back to a (newly created) unopened variant, auto-deleting the opened.
+    let opened_id = all["opened"]["id"].as_str().unwrap().to_string();
+    let back: Value = server
+        .client
+        .post(server.url(&format!(
+            "/api/appliances/{appliance_id}/items/{opened_id}/close-all"
+        )))
+        .header(CSRF_HEADER, &csrf)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(back["source_deleted"], true);
+    assert!(back["opened"].is_null());
+    assert_eq!(back["unopened"]["pack_count"].as_u64().unwrap(), 4);
 }
 
 #[tokio::test]

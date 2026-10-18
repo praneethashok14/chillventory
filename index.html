@@ -1482,18 +1482,52 @@
       }
       if (ungrouped.length > 0) {
         ungrouped.sort(compareItems);
-        const flat = h("div", { class: "inv-group" }, [
-          h("summary", {
-            style: "cursor:default;padding:0.75rem 1rem;background:var(--surface-2);display:flex;align-items:center;gap:0.5rem",
-          }, [h("strong", { text: "Ungrouped" })]),
-        ]);
-        // Not a details — just a visual list. Use a wrapper <div> instead.
+
+        // Visually pair ungrouped pack-based items that are variants of the
+        // same thing: same appliance, same case-insensitive name, same
+        // pack_label. If two or more such items exist, show them under one
+        // mini-heading so opened/unopened pairs appear together.
+        const pairKey = (item) =>
+          item.tracking === "pack"
+            ? item.appliance_id + "|" +
+              (item.name || "").trim().toLowerCase() + "|" +
+              (item.pack_label || "").toLowerCase()
+            : null;
+        const packClusters = new Map(); // key -> items[]
+        const singles = [];
+        for (const i of ungrouped) {
+          const k = pairKey(i);
+          if (!k) { singles.push(i); continue; }
+          if (!packClusters.has(k)) packClusters.set(k, []);
+          packClusters.get(k).push(i);
+        }
+        // Clusters of size 1 are just singles.
+        for (const [k, arr] of packClusters) {
+          if (arr.length < 2) {
+            singles.push(...arr);
+            packClusters.delete(k);
+          }
+        }
+
         const wrap = h("div", { class: "inv-group" }, [
           h("div", { style: "padding:0.75rem 1rem;background:var(--surface-2);font-weight:600" }, [
             h("span", { text: "Ungrouped" }),
           ]),
         ]);
-        for (const item of ungrouped) wrap.appendChild(renderInventoryItem(item, opts));
+
+        // Render each pair/cluster as a nested mini-group with a shared heading.
+        for (const arr of packClusters.values()) {
+          arr.sort((a, b) => a.pack_status.localeCompare(b.pack_status));
+          const header = arr[0];
+          const sub = h("div", { style: "padding:0.5rem 1rem;background:var(--surface);font-weight:600;border-top:1px solid var(--border);display:flex;align-items:center;gap:0.5rem" }, [
+            h("span", { text: header.name }),
+            h("span", { class: "pill", text: `${arr.length} variants` }),
+          ]);
+          wrap.appendChild(sub);
+          for (const item of arr) wrap.appendChild(renderInventoryItem(item, opts));
+        }
+        singles.sort(compareItems);
+        for (const item of singles) wrap.appendChild(renderInventoryItem(item, opts));
         container.appendChild(wrap);
       }
       return container;
@@ -1545,19 +1579,32 @@
         plusBtn,
       ]);
 
-      // Pack-opening actions on eligible unopened variants with count > 0
+      // Pack-opening / closing actions on eligible pack variants with count > 0
       const packActions = [];
-      if (item.tracking === "pack" && item.pack_status === "unopened" && item.pack_count > 0) {
-        packActions.push(h("button", {
-          disabled: busy,
-          onClick: () => packOpen(item, "one"),
-          text: "Mark ×1 Open",
-        }));
-        packActions.push(h("button", {
-          disabled: busy,
-          onClick: () => packOpen(item, "all"),
-          text: "Mark All Open",
-        }));
+      if (item.tracking === "pack" && item.pack_count > 0) {
+        if (item.pack_status === "unopened") {
+          packActions.push(h("button", {
+            disabled: busy,
+            onClick: () => packTransfer(item, "open", "one"),
+            text: "Mark ×1 Open",
+          }));
+          packActions.push(h("button", {
+            disabled: busy,
+            onClick: () => packTransfer(item, "open", "all"),
+            text: "Mark All Open",
+          }));
+        } else if (item.pack_status === "opened") {
+          packActions.push(h("button", {
+            disabled: busy,
+            onClick: () => packTransfer(item, "close", "one"),
+            text: "Mark ×1 Unopened",
+          }));
+          packActions.push(h("button", {
+            disabled: busy,
+            onClick: () => packTransfer(item, "close", "all"),
+            text: "Mark All Unopened",
+          }));
+        }
       }
 
       const actions = h("div", { class: "inv-actions" }, [
@@ -1752,20 +1799,25 @@
       });
     }
 
-    async function packOpen(item, mode) {
+    async function packTransfer(item, direction, mode) {
       if (state.busyItems.has(item.id)) return;
       state.busyItems.add(item.id);
       await withBusy(async () => {
         try {
-          const path = mode === "one" ? "open-one" : "open-all";
-          const result = await api(
+          const path =
+            (direction === "open" ? "open" : "close") +
+            "-" + (mode === "one" ? "one" : "all");
+          await api(
             "/api/appliances/" + encodeURIComponent(item.appliance_id) +
             "/items/" + encodeURIComponent(item.id) + "/" + path,
             { method: "POST" },
           );
-          // Refresh the inventory so the opened variant appears in the group.
           await reloadInventory();
-          toast(mode === "one" ? "Opened 1 pack." : "Opened all packs.", "success");
+          const verb = direction === "open" ? "Opened" : "Marked unopened";
+          toast(
+            (mode === "one" ? `${verb} 1 pack.` : `${verb} all packs.`),
+            "success",
+          );
           render();
         } catch (err) {
           toast(err.message, "error");

@@ -8,7 +8,7 @@
     "db:init:local": "wrangler d1 execute fridgeflow --local --file=./schema.sql",
     "db:backup": "mkdir -p backups && wrangler d1 export fridgeflow --remote --output=backups/fridgeflow-$(date +%Y%m%d-%H%M%S).sql",
     "dev": "npm run prepare-assets && wrangler dev",
-    "deploy": "npm run prepare-assets && wrangler deploy",
+    "deploy": "bash ./scripts/deploy.sh",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

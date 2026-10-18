@@ -777,14 +777,26 @@ app.post("/api/appliances/:id/items/:item_id/adjust", async (c) => {
 });
 
 app.post("/api/appliances/:id/items/:item_id/open-one", async (c) => {
-  return packOpen(c, "one");
+  return packTransfer(c, "open", "one");
 });
 
 app.post("/api/appliances/:id/items/:item_id/open-all", async (c) => {
-  return packOpen(c, "all");
+  return packTransfer(c, "open", "all");
 });
 
-async function packOpen(c: any, mode: "one" | "all"): Promise<Response> {
+app.post("/api/appliances/:id/items/:item_id/close-one", async (c) => {
+  return packTransfer(c, "close", "one");
+});
+
+app.post("/api/appliances/:id/items/:item_id/close-all", async (c) => {
+  return packTransfer(c, "close", "all");
+});
+
+async function packTransfer(
+  c: any,
+  direction: "open" | "close",
+  mode: "one" | "all",
+): Promise<Response> {
   const err = await requireAuth(c);
   if (err) return err;
   const session = c.get("session")!;
@@ -792,53 +804,119 @@ async function packOpen(c: any, mode: "one" | "all"): Promise<Response> {
   if (csrfErr) return csrfErr;
   const applianceId = c.req.param("id");
   const itemId = c.req.param("item_id");
+  const sourceStatus: PackStatus = direction === "open" ? "unopened" : "opened";
+  const destStatus: PackStatus = direction === "open" ? "opened" : "unopened";
   try {
     const result = await mutateInventory(c.env, session.account_id, (inv) => {
-      const source = inv.items.find(
+      const sourceIdx = inv.items.findIndex(
         (x) => x.id === itemId && x.appliance_id === applianceId,
       );
-      if (!source) throw new HttpErr(404, `item ${itemId} not found`);
+      if (sourceIdx === -1) throw new HttpErr(404, `item ${itemId} not found`);
+      const source = inv.items[sourceIdx]!;
       if (source.tracking !== "pack") throw new HttpErr(400, "item is not pack-based");
-      if (source.pack_status !== "unopened")
-        throw new HttpErr(400, "only unopened variants can be opened");
-      if (source.pack_count === 0)
-        throw new HttpErr(400, "no unopened packs available to open");
+      if (source.pack_status !== sourceStatus) {
+        throw new HttpErr(
+          400,
+          direction === "open"
+            ? "only unopened variants can be opened"
+            : "only opened variants can be marked unopened",
+        );
+      }
+      if (source.pack_count === 0) {
+        throw new HttpErr(
+          400,
+          direction === "open"
+            ? "no unopened packs available to open"
+            : "no opened packs available to mark unopened",
+        );
+      }
       const transfer = mode === "one" ? 1 : source.pack_count;
-      let opened = inv.items.find(
+
+      // Auto-group when the ungrouped source is being opened for the first
+      // time, so opened+unopened variants of the same item live together.
+      let effectiveGroupId: string | null = source.group_id ?? null;
+      if (!source.group_id && direction === "open") {
+        const groupName = source.name.trim();
+        let g = inv.groups.find(
+          (g) =>
+            g.appliance_id === source.appliance_id &&
+            g.name.toLowerCase() === groupName.toLowerCase(),
+        );
+        if (!g) {
+          g = {
+            id: newId(),
+            name: groupName,
+            appliance_id: source.appliance_id,
+            description: null,
+            created_at: nowIso(),
+            updated_at: nowIso(),
+          };
+          inv.groups.push(g);
+        }
+        source.group_id = g.id;
+        source.updated_at = nowIso();
+        effectiveGroupId = g.id;
+      }
+
+      let dest = inv.items.find(
         (i) =>
           i.appliance_id === source.appliance_id &&
-          i.group_id === source.group_id &&
+          (i.group_id ?? null) === effectiveGroupId &&
           i.tracking === "pack" &&
-          i.pack_status === "opened" &&
+          i.pack_status === destStatus &&
           i.pack_label === source.pack_label,
       );
-      if (!opened) {
-        opened = {
+      if (!dest) {
+        dest = {
           id: newId(),
           name: source.name,
           appliance_id: source.appliance_id,
-          group_id: source.group_id ?? null,
+          group_id: effectiveGroupId,
           category: source.category ?? null,
           tracking: "pack",
           pack_count: 0,
           pack_label: source.pack_label,
-          pack_status: "opened",
+          pack_status: destStatus,
           expiration_date: source.expiration_date ?? null,
           notes: source.notes ?? null,
           has_photo: false,
           created_at: nowIso(),
           updated_at: nowIso(),
         };
-        inv.items.push(opened);
+        inv.items.push(dest);
       }
-      if (opened.tracking !== "pack") throw new HttpErr(500, "opened variant invalid");
-      opened.pack_count += transfer;
-      opened.updated_at = nowIso();
+      if (dest.tracking !== "pack") throw new HttpErr(500, "dest variant invalid");
+      dest.pack_count += transfer;
+      dest.updated_at = nowIso();
       source.pack_count -= transfer;
       source.updated_at = nowIso();
-      return { unopened: source, opened };
+
+      let sourceAfter: InventoryItem | null = source;
+      let photoCleanup: string | null = null;
+      if (source.pack_count === 0) {
+        photoCleanup = source.id;
+        inv.items.splice(sourceIdx, 1);
+        sourceAfter = null;
+      }
+      const sourceKey = direction === "open" ? "unopened" : "opened";
+      const destKey = direction === "open" ? "opened" : "unopened";
+      return {
+        payload: {
+          [sourceKey]: sourceAfter,
+          [destKey]: dest,
+          source_deleted: sourceAfter === null,
+        },
+        photoCleanup,
+      };
     });
-    return c.json(result);
+    if (result.photoCleanup) {
+      await c.env.DB.prepare(
+        "DELETE FROM item_photos WHERE account_id = ? AND item_id = ?",
+      )
+        .bind(session.account_id, result.photoCleanup)
+        .run();
+    }
+    return c.json(result.payload);
   } catch (e) {
     return httpErrorResponse(c, e);
   }

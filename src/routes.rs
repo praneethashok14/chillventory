@@ -200,6 +200,14 @@ pub fn router(state: AppState) -> Router {
             post(mark_all_open),
         )
         .route(
+            "/api/appliances/:id/items/:item_id/close-one",
+            post(mark_one_unopened),
+        )
+        .route(
+            "/api/appliances/:id/items/:item_id/close-all",
+            post(mark_all_unopened),
+        )
+        .route(
             "/api/appliances/:id/items/:item_id/photo",
             get(get_photo).post(upload_photo).delete(delete_photo),
         )
@@ -882,17 +890,21 @@ fn round_quantity(v: f64) -> f64 {
     (v * 10_000.0).round() / 10_000.0
 }
 
-// ---------- pack opening ----------
+// ---------- pack opening / closing ----------
 
 async fn mark_one_open(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path((appliance_id, item_id)): Path<(String, String)>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let session = require_auth(&state.accounts, &headers)?;
-    require_csrf(&session, &headers)?;
-    let inv = state.inventory(&session.account_id)?;
-    pack_transfer(&inv, &appliance_id, &item_id, TransferMode::One)
+    pack_transfer_handler(
+        state,
+        headers,
+        appliance_id,
+        item_id,
+        TransferDirection::Open,
+        TransferMode::One,
+    )
 }
 
 async fn mark_all_open(
@@ -900,29 +912,115 @@ async fn mark_all_open(
     headers: HeaderMap,
     Path((appliance_id, item_id)): Path<(String, String)>,
 ) -> ApiResult<Json<serde_json::Value>> {
+    pack_transfer_handler(
+        state,
+        headers,
+        appliance_id,
+        item_id,
+        TransferDirection::Open,
+        TransferMode::All,
+    )
+}
+
+async fn mark_one_unopened(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((appliance_id, item_id)): Path<(String, String)>,
+) -> ApiResult<Json<serde_json::Value>> {
+    pack_transfer_handler(
+        state,
+        headers,
+        appliance_id,
+        item_id,
+        TransferDirection::Close,
+        TransferMode::One,
+    )
+}
+
+async fn mark_all_unopened(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((appliance_id, item_id)): Path<(String, String)>,
+) -> ApiResult<Json<serde_json::Value>> {
+    pack_transfer_handler(
+        state,
+        headers,
+        appliance_id,
+        item_id,
+        TransferDirection::Close,
+        TransferMode::All,
+    )
+}
+
+fn pack_transfer_handler(
+    state: AppState,
+    headers: HeaderMap,
+    appliance_id: String,
+    item_id: String,
+    direction: TransferDirection,
+    mode: TransferMode,
+) -> ApiResult<Json<serde_json::Value>> {
     let session = require_auth(&state.accounts, &headers)?;
     require_csrf(&session, &headers)?;
     let inv = state.inventory(&session.account_id)?;
-    pack_transfer(&inv, &appliance_id, &item_id, TransferMode::All)
+    let resp = pack_transfer(&inv, &appliance_id, &item_id, direction, mode)?;
+    // If the source item was auto-deleted, best-effort remove its photo.
+    if resp.0.get("source_deleted").and_then(|v| v.as_bool()) == Some(true) {
+        if let Some(path) = state.photo_path(&session.account_id, &item_id) {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+    Ok(resp)
 }
 
+#[derive(Clone, Copy)]
 enum TransferMode {
     One,
     All,
+}
+
+#[derive(Clone, Copy)]
+enum TransferDirection {
+    /// Unopened → Opened.
+    Open,
+    /// Opened → Unopened.
+    Close,
+}
+
+impl TransferDirection {
+    fn source_status(self) -> PackStatus {
+        match self {
+            TransferDirection::Open => PackStatus::Unopened,
+            TransferDirection::Close => PackStatus::Opened,
+        }
+    }
+    fn dest_status(self) -> PackStatus {
+        match self {
+            TransferDirection::Open => PackStatus::Opened,
+            TransferDirection::Close => PackStatus::Unopened,
+        }
+    }
 }
 
 fn pack_transfer(
     store: &InventoryStore,
     appliance_id: &str,
     item_id: &str,
+    direction: TransferDirection,
     mode: TransferMode,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let (unopened_after, opened_after) = store
-        .mutate(|i| perform_transfer(i, appliance_id, item_id, &mode))
+    let (source_after, dest_after) = store
+        .mutate(|i| perform_transfer(i, appliance_id, item_id, direction, mode))
         .map_err(storage_err_to_api)?;
+    let (source_key, dest_key) = match direction {
+        TransferDirection::Open => ("unopened", "opened"),
+        TransferDirection::Close => ("opened", "unopened"),
+    };
+    let source_deleted = source_after.is_none();
     Ok(Json(json!({
-        "unopened": unopened_after,
-        "opened": opened_after,
+        source_key: source_after,
+        dest_key: dest_after,
+        "source_deleted": source_deleted,
     })))
 }
 
@@ -930,16 +1028,15 @@ fn perform_transfer(
     inv: &mut Inventory,
     appliance_id: &str,
     item_id: &str,
-    mode: &TransferMode,
-) -> Result<(InventoryItem, InventoryItem), StorageError> {
-    let (source_idx, source_snapshot) = {
-        let idx = inv
-            .items
-            .iter()
-            .position(|i| i.id == item_id && i.appliance_id == appliance_id)
-            .ok_or_else(|| StorageError::Corrupt(format!("item {item_id} not found")))?;
-        (idx, inv.items[idx].clone())
-    };
+    direction: TransferDirection,
+    mode: TransferMode,
+) -> Result<(Option<InventoryItem>, InventoryItem), StorageError> {
+    let source_idx = inv
+        .items
+        .iter()
+        .position(|i| i.id == item_id && i.appliance_id == appliance_id)
+        .ok_or_else(|| StorageError::Corrupt(format!("item {item_id} not found")))?;
+    let source_snapshot = inv.items[source_idx].clone();
 
     let (pack_count, pack_label, pack_status) = match &source_snapshot.tracking {
         ItemTracking::Pack {
@@ -951,15 +1048,17 @@ fn perform_transfer(
             return Err(StorageError::Corrupt("item is not pack-based".into()));
         }
     };
-    if pack_status != PackStatus::Unopened {
-        return Err(StorageError::Corrupt(
-            "only unopened variants can be opened".into(),
-        ));
+    if pack_status != direction.source_status() {
+        return Err(StorageError::Corrupt(match direction {
+            TransferDirection::Open => "only unopened variants can be opened".into(),
+            TransferDirection::Close => "only opened variants can be marked unopened".into(),
+        }));
     }
     if pack_count == 0 {
-        return Err(StorageError::Corrupt(
-            "no unopened packs available to open".into(),
-        ));
+        return Err(StorageError::Corrupt(match direction {
+            TransferDirection::Open => "no unopened packs available to open".into(),
+            TransferDirection::Close => "no opened packs available to mark unopened".into(),
+        }));
     }
 
     let transfer = match mode {
@@ -967,32 +1066,68 @@ fn perform_transfer(
         TransferMode::All => pack_count,
     };
 
-    let opened_idx = inv.items.iter().position(|i| {
+    // Auto-group: if the source item has no group, pair opened+unopened
+    // variants by auto-creating a group named after the item so they visually
+    // live together. Only applies when transferring Open → Unopened could
+    // confuse users, so we only do this on the Open direction (which is where
+    // the matching dest variant is auto-created).
+    let effective_group_id =
+        if source_snapshot.group_id.is_none() && matches!(direction, TransferDirection::Open) {
+            let group_name = source_snapshot.name.trim().to_string();
+            let existing = inv.groups.iter().find(|g| {
+                g.appliance_id == source_snapshot.appliance_id
+                    && g.name.eq_ignore_ascii_case(&group_name)
+            });
+            let gid = match existing {
+                Some(g) => g.id.clone(),
+                None => {
+                    let g = Group {
+                        id: new_id(),
+                        name: group_name,
+                        appliance_id: source_snapshot.appliance_id.clone(),
+                        description: None,
+                        created_at: now(),
+                        updated_at: now(),
+                    };
+                    let id = g.id.clone();
+                    inv.groups.push(g);
+                    id
+                }
+            };
+            inv.items[source_idx].group_id = Some(gid.clone());
+            inv.items[source_idx].updated_at = now();
+            Some(gid)
+        } else {
+            source_snapshot.group_id.clone()
+        };
+
+    let dest_status = direction.dest_status();
+    let dest_idx = inv.items.iter().position(|i| {
         i.appliance_id == source_snapshot.appliance_id
-            && i.group_id == source_snapshot.group_id
+            && i.group_id == effective_group_id
             && match &i.tracking {
                 ItemTracking::Pack {
                     pack_label: lbl,
-                    pack_status: PackStatus::Opened,
+                    pack_status,
                     ..
-                } => lbl == &pack_label,
+                } => lbl == &pack_label && *pack_status == dest_status,
                 _ => false,
             }
     });
 
-    let opened_idx = match opened_idx {
+    let dest_idx = match dest_idx {
         Some(idx) => idx,
         None => {
             let new_item = InventoryItem {
                 id: new_id(),
                 name: source_snapshot.name.clone(),
                 appliance_id: source_snapshot.appliance_id.clone(),
-                group_id: source_snapshot.group_id.clone(),
+                group_id: effective_group_id.clone(),
                 category: source_snapshot.category.clone(),
                 tracking: ItemTracking::Pack {
                     pack_count: 0,
                     pack_label: pack_label.clone(),
-                    pack_status: PackStatus::Opened,
+                    pack_status: dest_status,
                 },
                 expiration_date: source_snapshot.expiration_date.clone(),
                 notes: source_snapshot.notes.clone(),
@@ -1008,18 +1143,21 @@ fn perform_transfer(
     if let ItemTracking::Pack {
         pack_count: ref mut dst,
         ..
-    } = inv.items[opened_idx].tracking
+    } = inv.items[dest_idx].tracking
     {
         let next = (*dst as u64)
             .checked_add(transfer as u64)
-            .ok_or_else(|| StorageError::Corrupt("opened pack count overflow".into()))?;
+            .ok_or_else(|| StorageError::Corrupt("pack count overflow".into()))?;
         if next > u32::MAX as u64 {
-            return Err(StorageError::Corrupt("opened pack count overflow".into()));
+            return Err(StorageError::Corrupt("pack count overflow".into()));
         }
         *dst = next as u32;
     }
-    inv.items[opened_idx].updated_at = now();
+    inv.items[dest_idx].updated_at = now();
 
+    // The source index may have shifted if the dest was newly pushed before
+    // the source — which can't happen (dest is pushed after source lookup),
+    // but a group auto-create keeps source stable so we're fine.
     if let ItemTracking::Pack {
         pack_count: ref mut src,
         ..
@@ -1029,7 +1167,22 @@ fn perform_transfer(
     }
     inv.items[source_idx].updated_at = now();
 
-    Ok((inv.items[source_idx].clone(), inv.items[opened_idx].clone()))
+    // Delete the source variant if it hit zero. Fetch id first so we can
+    // return a snapshot after removal.
+    let source_zero = matches!(
+        &inv.items[source_idx].tracking,
+        ItemTracking::Pack { pack_count: 0, .. }
+    );
+    let dest_item = inv.items[dest_idx].clone();
+    let source_after = if source_zero {
+        let removed = inv.items.remove(source_idx);
+        // best-effort photo cleanup is caller's responsibility (filesystem/D1)
+        drop(removed);
+        None
+    } else {
+        Some(inv.items[source_idx].clone())
+    };
+    Ok((source_after, dest_item))
 }
 
 // ---------- groups ----------

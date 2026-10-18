@@ -1119,12 +1119,34 @@ app.get("/api/appliances/:id/items/:item_id/photo", async (c) => {
     "SELECT data FROM item_photos WHERE account_id = ? AND item_id = ?",
   )
     .bind(session.account_id, itemId)
-    .first<{ data: ArrayBuffer }>();
+    .first<Record<string, unknown>>();
   if (!row) return jsonError(c, 404, "not_found", "photo not found");
-  // D1 returns BLOB columns as ArrayBuffer; stream it back as image/jpeg.
-  return new Response(row.data, {
+  const raw = (row as any).data;
+  // D1's JS bindings have historically returned BLOB columns in several
+  // different shapes depending on the wrangler version (ArrayBuffer, Uint8Array,
+  // number[], or Node Buffer). Normalise to a Uint8Array so `new Response()`
+  // always sees a valid BufferSource.
+  let bytes: Uint8Array;
+  if (raw instanceof Uint8Array) {
+    bytes = raw;
+  } else if (raw instanceof ArrayBuffer) {
+    bytes = new Uint8Array(raw);
+  } else if (Array.isArray(raw)) {
+    bytes = new Uint8Array(raw as number[]);
+  } else if (raw && typeof raw === "object" && typeof (raw as any).byteLength === "number") {
+    bytes = new Uint8Array((raw as any).buffer ?? raw);
+  } else {
+    return jsonError(
+      c,
+      500,
+      "internal",
+      `unexpected photo blob type: ${Object.prototype.toString.call(raw)} (len=${(raw as any)?.length ?? (raw as any)?.byteLength ?? "?"})`,
+    );
+  }
+  return new Response(bytes, {
     headers: {
       "content-type": "image/jpeg",
+      "content-length": String(bytes.byteLength),
       "cache-control": "private, no-store",
     },
   });

@@ -1,17 +1,44 @@
 # Fridgeflow
 
-A PIN-protected, installable PWA for manually tracking food (and anything else) across multiple fridges and freezers. The frontend is a single `index.html` (vanilla JavaScript, no build tools). The backend is a small Rust/Axum/Tokio server that persists everything as JSON on disk.
+A PIN-protected, installable PWA for manually tracking food (and anything else) across multiple fridges and freezers. The frontend is a single `index.html` (vanilla JavaScript, no build tools). Two interchangeable backends ship in the repo: a Rust/Axum/Tokio server with JSON-file persistence (great for local development) and a TypeScript/Hono Cloudflare Worker with D1 persistence (the live production deployment).
 
 Each user has their own **account** (name + PIN). Accounts are fully isolated — two people on the same server can even pick the same PIN and never see each other's data.
 
 Spec source: the `README/` directory in this repository (files `00-MASTER.md` through `11-PIN-ACCESS-AND-SECURITY.md`).
 
-## Prerequisites
+## 🚀 Live deployment
 
+- **Production URL:** <https://fridgeflow.praneethashok14.workers.dev>
+- **Hosted on:** Cloudflare Workers (free tier) with D1 (SQLite) for durable storage, KV for sessions.
+- **Deployed from:** `cloudflare/` subdirectory in this repo. See [`cloudflare/README.md`](cloudflare/README.md) for the full Workers deployment guide, including how to redeploy, back up D1, and roll back a bad version.
+- **First visit** prompts you to create an account; subsequent visits unlock with your name + PIN.
+- **Install as a PWA** (home-screen icon) from the browser's install button or **Share → Add to Home Screen** on iOS.
+
+## Repo layout at a glance
+
+```
+.
+├── README/                   # Specification docs (00..11).
+├── src/                      # Rust/Axum backend (local-dev friendly).
+├── tests/                    # Rust integration tests.
+├── index.html                # The entire frontend (vanilla JS PWA).
+├── manifest.webmanifest      # PWA manifest.
+├── service-worker.js         # Service worker (shell only, no API caching).
+├── icons/                    # SVG app icons.
+├── cloudflare/               # Workers backend + deploy scripts.
+│   ├── src/index.ts          # Hono router with the full REST API.
+│   ├── wrangler.toml         # D1 + KV + assets bindings.
+│   ├── schema.sql            # D1 schema.
+│   ├── scripts/deploy.sh     # Deploy helper (double-pins the new version).
+│   └── README.md             # Workers deployment guide.
+└── Cargo.toml                # Rust package manifest.
+```
+
+## Running the Rust backend locally
+
+Prereqs:
 - **Rust** 1.75 or newer (stable). If `cargo` is not on your `PATH`, install [rustup](https://rustup.rs/) and reopen your shell.
 - No Node.js, bundler, or frontend toolchain required.
-
-## Run it
 
 From the project root:
 
@@ -25,7 +52,7 @@ You should see:
 fridgeflow listening on http://127.0.0.1:8787
 ```
 
-Open <http://127.0.0.1:8787> in your browser. On your first visit the UI prompts you to create an account (name + 4–12 digit PIN). The button **"Or log in with existing PIN"** switches to the login form, and the login form has **"Or create a new account"** to switch back.
+Open <http://127.0.0.1:8787> in your browser. On your first visit the UI prompts you to create an account (name + 4–12 digit PIN). The signup screen has a **"Login with existing account"** button, and the login screen has **"Or create a new account"** to switch back.
 
 ### Environment variables
 
@@ -165,7 +192,7 @@ cargo test
 
 Tests spin up isolated servers against temporary data directories, so they never touch your real `data/` folder. The suite covers: appliance/item/group CRUD, +/− adjustments (incl. 20 concurrent requests → exactly +20), pack opening with auto-created opened variants and conservation, deletion-safety strategies, session expiry, lock/change-PIN session revocation, CSRF enforcement, two-account isolation (same PIN, different data), corrupt-file preservation, and full persistence across restart.
 
-## Project layout
+## Rust backend — detailed layout
 
 ```
 .
@@ -188,6 +215,19 @@ Tests spin up isolated servers against temporary data directories, so they never
 ├── icons/                        # App icons (SVG).
 └── data/                         # Created at runtime; holds accounts.json + accounts/<id>/inventory.json.
 ```
+
+## Workers backend (deployed)
+
+The TypeScript/Hono port under [`cloudflare/`](cloudflare/) is what serves the live site. API shape is identical to the Rust server. Key differences:
+
+- **Storage:** D1 (SQLite) instead of filesystem — `accounts`, `inventories`, and `item_photos` tables. Fully safe across `wrangler deploy` (data lives in your Cloudflare account, not in the Worker bundle).
+- **PIN hashing:** PBKDF2-SHA256 at 100k iterations via Workers' Web Crypto (Workers caps PBKDF2 at 100k; iteration count is stored in each hash, so bumping the config var is safe).
+- **Photos:** JPEG BLOBs in D1 (no R2 required).
+- **Deploys:** `cd cloudflare && npm run deploy` — the helper script in `cloudflare/scripts/deploy.sh` captures the version ID from `wrangler deploy` and pins it to 100% traffic twice (with a wait in between) to defeat a wrangler v4 quirk where a deferred second deploy can override the first.
+- **Backups:** `npm run db:backup` dumps the whole D1 to a timestamped SQL file under `cloudflare/backups/` (gitignored).
+- **D1 Time Travel:** Automatic 30-day point-in-time restore included — see the Workers README for the `wrangler d1 time-travel` commands.
+
+Deployment and recovery details are all in [`cloudflare/README.md`](cloudflare/README.md).
 
 ## License
 

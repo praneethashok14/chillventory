@@ -471,16 +471,6 @@
       return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
     }
 
-    function pluralize(word, count) {
-      if (count === 1) return word;
-      const w = String(word).toLowerCase();
-      if (w === "person") return "people";
-      if (w.endsWith("y") && !["ay", "ey", "oy", "uy"].some(s => w.endsWith(s))) return w.slice(0, -1) + "ies";
-      if (w.endsWith("s") || w.endsWith("sh") || w.endsWith("ch") || w.endsWith("x") || w.endsWith("z")) return w + "es";
-      if (w.endsWith("f") || w.endsWith("fe")) return w.replace(/(f|fe)$/, "ves");
-      return w + "s";
-    }
-
     function expirationState(iso) {
       if (!iso) return "none";
       const [y, m, d] = iso.split("-").map(Number);
@@ -988,7 +978,7 @@
         const list = h("div", { class: "stack" });
         for (const i of matches) list.appendChild(renderInventoryItem(i, { showAppliance: true }));
         main.appendChild(h("section", { class: "card stack", "aria-label": "Search results" }, [
-          h("h2", { style: "margin:0;font-size:1.1rem", text: `${matches.length} ${pluralize("result", matches.length)}` }),
+          h("h2", { style: "margin:0;font-size:1.1rem", text: `${matches.length} result${matches.length === 1 ? "" : "s"}` }),
           list,
         ]));
         return main;
@@ -1043,7 +1033,7 @@
             h("strong", { text: a.name }),
             h("span", { class: "pill", text: a.kind }),
           ]),
-          h("div", { class: "muted", text: items.length + " " + pluralize("item", items.length) }),
+          h("div", { class: "muted", text: items.length + " item" + (items.length === 1 ? "" : "s") }),
           a.location ? h("div", { class: "muted", text: a.location }) : null,
         ]);
         grid.appendChild(card);
@@ -1101,7 +1091,7 @@
               h("span", { class: "pill", text: a.kind }),
             ]),
             a.location ? h("div", { class: "muted", text: a.location }) : null,
-            h("div", { class: "muted", text: itemCount + " " + pluralize("item", itemCount) }),
+            h("div", { class: "muted", text: itemCount + " item" + (itemCount === 1 ? "" : "s") }),
           ]),
           h("div", { class: "row" }, [
             h("button", { onClick: () => { state.activeApplianceId = a.id; state.view = "appliance"; render(); }, text: "Open" }),
@@ -1218,7 +1208,7 @@
       openDialog({
         title: `Delete "${appliance.name}"`,
         body: h("div", { class: "stack" }, [
-          h("p", { text: `This appliance holds ${items.length} ${pluralize("item", items.length)} and ${groups.length} ${pluralize("group", groups.length)}. Choose what happens to them:` }),
+          h("p", { text: `This appliance holds ${items.length} item(s) and ${groups.length} group(s). Choose what happens to them:` }),
           h("fieldset", { style: "border:none;padding:0" }, [
             radioEl("del-strat", "move", strategy === "move", "Move contents to another appliance", (v) => { strategy = v; }),
             moveSelect,
@@ -1458,7 +1448,7 @@
         const g = groupMap.get(gid);
         const summary = h("summary", {}, [
           h("strong", { text: g.name }),
-          h("span", { class: "pill", text: groupItems.length + " " + pluralize("variant", groupItems.length) }),
+          h("span", { class: "pill", text: groupItems.length + " variant" + (groupItems.length === 1 ? "" : "s") }),
           h("div", { class: "row", style: "margin-left:auto" }, [
             h("button", { class: "ghost", onClick: (e) => { e.preventDefault(); e.stopPropagation(); openItemDialog(null, g.appliance_id, g.id); }, text: "+ Variant" }),
             h("button", { class: "ghost", onClick: (e) => { e.preventDefault(); e.stopPropagation(); openGroupDialog(g); }, text: "Edit" }),
@@ -1519,7 +1509,7 @@
           const header = arr[0];
           const sub = h("div", { style: "padding:0.5rem 1rem;background:var(--surface);font-weight:600;border-top:1px solid var(--border);display:flex;align-items:center;gap:0.5rem" }, [
             h("span", { text: header.name }),
-            h("span", { class: "pill", text: `${arr.length} ${pluralize("variant", arr.length)}` }),
+            h("span", { class: "pill", text: `${arr.length} variants` }),
           ]);
           wrap.appendChild(sub);
           for (const item of arr) wrap.appendChild(renderInventoryItem(item, opts));
@@ -1557,7 +1547,7 @@
       const delta = item.tracking === "individual" ? defaultIndividualDelta(item.unit) : 1;
       const valueDisplay = item.tracking === "individual"
         ? formatNumber(item.quantity) + " " + (item.unit || "")
-        : item.pack_count + " " + pluralize(item.pack_label || "pack", item.pack_count);
+        : item.pack_count + " " + (item.pack_label || "pack") + (item.pack_count === 1 ? "" : "s");
 
       const minusBtn = h("button", {
         class: "icon", "aria-label": minusLabel,
@@ -2183,7 +2173,7 @@
       openDialog({
         title: `Delete group "${group.name}"`,
         body: h("div", { class: "stack" }, [
-          h("p", { text: `This group has ${children.length} ${pluralize("variant", children.length)}. Choose what happens to them:` }),
+          h("p", { text: `This group has ${children.length} variant(s). Choose what happens to them:` }),
           h("fieldset", { style: "border:none;padding:0" }, [
             radioEl("delg-strat", "detach", strategy === "detach", "Keep variants, remove from group", (v) => { strategy = v; }),
             radioEl("delg-strat", "move", strategy === "move", "Move variants into another group in the same appliance", (v) => { strategy = v; }),

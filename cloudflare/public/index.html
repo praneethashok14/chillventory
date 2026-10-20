@@ -471,37 +471,14 @@
       return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
     }
 
-    /**
-     * Pluralizes a word based on the given count.
-     * @param {string} word - The singular form of the word.
-     * @param {number} count - The number of items.
-     * @returns {string} The pluralized word.
-     */
     function pluralize(word, count) {
       if (count === 1) return word;
-
-      const irregulars = {
-        "person": "people",
-        "mouse": "mice",
-        "tooth": "teeth",
-        "foot": "feet",
-        "child": "children",
-      };
-
-      if (irregulars[word]) return irregulars[word];
-
-      if (word.endsWith("fe")) return word.slice(0, -2) + "ves";
-      if (word.endsWith("f")) return word.slice(0, -1) + "ves";
-
-      if (word.endsWith("y") && !/[aeiou]y$/.test(word)) {
-        return word.slice(0, -1) + "ies";
-      }
-
-      if (/[sxz]|sh|ch$/.test(word)) {
-        return word + "es";
-      }
-
-      return word + "s";
+      const w = String(word).toLowerCase();
+      if (w === "person") return "people";
+      if (w.endsWith("y") && !["ay", "ey", "oy", "uy"].some(s => w.endsWith(s))) return w.slice(0, -1) + "ies";
+      if (w.endsWith("s") || w.endsWith("sh") || w.endsWith("ch") || w.endsWith("x") || w.endsWith("z")) return w + "es";
+      if (w.endsWith("f") || w.endsWith("fe")) return w.replace(/(f|fe)$/, "ves");
+      return w + "s";
     }
 
     function expirationState(iso) {
@@ -1022,8 +999,8 @@
         statCard("Appliances", state.appliances.length),
         statCard("Groups", state.groups.length),
         statCard("Items", state.items.length),
-        statCard(pluralize("Expired item", totals.expired), totals.expired, "danger"),
-        statCard(pluralize("Item expiring in ≤ 7 days", totals.soon), totals.soon, "warning"),
+        statCard("Expired", totals.expired, "danger"),
+        statCard("Expiring in ≤ 7 days", totals.soon, "warning"),
       ]);
       main.appendChild(stats);
 
